@@ -12,7 +12,7 @@ const defaultSelectedCodes = ['USA', 'CHN', 'IND']; // Example, adjust as needed
 /**
  * Load data from CSV file asynchronously and render charts
  */
-d3.csv('data/median-age.csv')
+d3.csv('../data/median-age.csv')
   .then(_data => {
     data = _data;
 
@@ -107,3 +107,17 @@ function filterData(selectedCodes) {
 }
 
 
+function resizeVisualizations() {
+    if (scatterplot) {
+        scatterplot.resize(); // recalculates width/height from parent container
+        scatterplot.updateVis();
+    }
+    if (barchart) {
+        barchart.resize();
+        barchart.updateVis();
+    }
+}
+
+window.addEventListener('resize', () => {
+    resizeVisualizations();
+});

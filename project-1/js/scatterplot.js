@@ -6,14 +6,16 @@ class Scatterplot {
    * @param {Array}
    */
   constructor(_config, _data) {
+    const parent = document.querySelector(_config.parentElement);
+
     this.config = {
-      parentElement: _config.parentElement,
-      colorScale: _config.colorScale,
-      containerWidth: _config.containerWidth || 500,
-      containerHeight: _config.containerHeight || 300,
-      margin: _config.margin || {top: 25, right: 20, bottom: 20, left: 35},
-      tooltipPadding: _config.tooltipPadding || 15
-    }
+        parentElement: _config.parentElement,
+        colorScale: _config.colorScale,
+        containerWidth: parent ? parent.clientWidth : (_config.containerWidth || 2000),
+        containerHeight: parent ? parent.clientHeight : (_config.containerHeight || 300),
+        margin: _config.margin || { top: 25, right: 20, bottom: 20, left: 35 },
+        tooltipPadding: _config.tooltipPadding || 15
+    };
     this.data = _data;
     this.initVis();
   }
@@ -171,4 +173,42 @@ class Scatterplot {
         .call(vis.yAxis)
         .call(g => g.select('.domain').remove())
   }
+
+resize() {
+    const parent = document.querySelector(this.config.parentElement);
+    this.config.containerWidth = parent.clientWidth;
+    this.config.containerHeight = parent.clientHeight;
+
+    this.width = this.config.containerWidth - this.config.margin.left - this.config.margin.right;
+    this.height = this.config.containerHeight - this.config.margin.top - this.config.margin.bottom;
+
+    // Resize SVG
+    this.svg
+        .attr('width', this.config.containerWidth)
+        .attr('height', this.config.containerHeight);
+
+    // Update chart group position
+    this.chart.attr('transform', `translate(${this.config.margin.left},${this.config.margin.top})`);
+
+    // Update scales
+    this.xScale.range([0, this.width]);
+    this.yScale.range([this.height, 0]);
+
+    // Update axes positions
+    this.xAxisG.attr('transform', `translate(0, ${this.height})`);
+
+    // Adjust tick counts based on width
+    const approxTickSpacing = 80; // px between ticks
+    const tickCount = Math.max(2, Math.floor(this.width / approxTickSpacing));
+    this.xAxis.ticks(tickCount);
+
+    // Optional: update y-axis ticks as well
+    const approxYTickSpacing = 50;
+    this.yAxis.ticks(Math.max(2, Math.floor(this.height / approxYTickSpacing)));
 }
+
+
+
+}
+
+

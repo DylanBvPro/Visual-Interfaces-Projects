@@ -1,84 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>D3 Project Starter Template</title>
-    <meta charset="UTF-8">
-    <link rel="icon" href="data:;base64,iVBORwOKGO=" />
-    <link rel="stylesheet" href="css/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700&display=swap" rel="stylesheet">
-</head>
-<body>    
-    <!-- Add HTML content, SVG drawing area, ... -->
-<style>
-    #country-filters {
-      border: 1px solid #ccc;
-      padding: 10px;
-      width: 250px;
-      max-height: 300px;
-      overflow-y: auto;
-      margin-bottom: 20px;
-    }
-
-    #country-filters input[type="text"] {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 5px;
-      box-sizing: border-box;
-    }
-
-    .checkbox-list label {
-      display: block;
-      margin: 2px 0;
-      cursor: pointer;
-    }
-
-    .tooltip {
-      position: absolute;
-      pointer-events: none;
-      background-color: rgba(0,0,0,0.7);
-      color: #fff;
-      padding: 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      display: none;
-    }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Projects</title>
+  <link rel="stylesheet" type="text/css" href="./style/main.css" />
+  <style>
   </style>
+</head>
+<body>
+  <header>
+    <h2>My Portfolio</h2>
+    <nav>
+      <a href="#">Home</a>
+      <a href="./pages/median-age.html">Median Age</a>
+      <a href="./pages/population-growth-rates.html">Population Growth Rates</a>
+      <a href="./pages/comparative.html">Comparative Analysis</a>
+    </nav>
+  </header>
 
-  <h1>Median Age Visualization</h1>
+  <main>
+    <h1>My Projects</h1>
 
-  <!-- Country selector (search + checkboxes) -->
-    <div id="country-filters"></div>
+    <section class="projects">
+      <!-- Example project cards -->
+      <div class="project-card">
+        <img src="./images/project1.png" alt="Project 1 Screenshot">
+        <h3>Project One</h3>
+        <p>A modern web application built with HTML, CSS, and JavaScript. Features responsive design and interactive UI.</p>
+      </div>
 
-    <div class="container">
-        <div class="margin-right"><svg id="scatterplot"></svg></div>
-        <div><svg id="barchart"></svg></div>
-    </div>
-  
-    <div class="source">
-        Source: Data from <a href="https/link">link.com</a>
-    </div>
+      <div class="project-card">
+        <img src="./images/project2.png" alt="Project 2 Screenshot">
+        <h3>Project Two</h3>
+        <p>zzzzzz.</p>
+      </div>
 
-    <div id="tooltip"></div>
-    <svg id="chart"></svg>
-    <ul class="legend">
-        <li class="legend-btn" category="tropical-cyclone"><span class="legend-symbol"></span> Tropical Cyclone</li>
-        <li class="legend-btn" category="drought-wildfire"><span class="legend-symbol"></span> Drought Wildfire</li>
-        <li class="legend-btn" category="severe-storm"><span class="legend-symbol"></span> Severe Storm</li>
-        <li class="legend-btn" category="flooding"><span class="legend-symbol"></span> Flooding</li>
-    </ul>
+      <div class="project-card">
+        <img src="./images/project3.png" alt="Project 3 Screenshot">
+        <h3>Project Three</h3>
+        <p>zzzzzzz.</p>
+      </div>
 
+      <!-- Add more projects as needed -->
+    </section>
+  </main>
 
-
- 
-    <!-- D3 bundle -->
-    <script src="js/d3.v6.min.js"></script>
-    <script src="js/countryselect.js"></script>
-    <script src="js/scatterplot.js"></script>
-    <script src="js/barchart.js"></script>
-    <script src="js/focusContextVis.js"></script>
-    <!-- Our JS code - INCLUDING the new files-->
-    <script src="js/main.js"></script>
-
-
+  <footer>
+    &copy; 2026 My Portfolio. All rights reserved.
+  </footer>
 </body>
 </html>
