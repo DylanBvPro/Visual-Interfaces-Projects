@@ -299,11 +299,18 @@ class Barchart {
         vis.xScale.domain(grouped.map(d => d.key));
         const yMin = d3.min(grouped, d => d.value);
         const yMax = d3.max(grouped, d => d.value);
-        const yRange = yMax - yMin;
-        vis.yScale.domain([
-            yMin - (yRange > 0 ? yRange * 0.05 : 1),
-            yMax + (yRange > 0 ? yRange * 0.05 : 1)
-        ]);
+        const yRange = (isFinite(yMax) && isFinite(yMin)) ? (yMax - yMin) : 0;
+
+        // Compute padding. If all values equal or range is zero, use a small absolute padding.
+        const pad = yRange > 0 ? yRange * 0.05 : (Math.abs(yMax) > 0 ? Math.abs(yMax) * 0.05 : 1);
+
+        // Ensure the y-domain always includes zero so the zero baseline is visible
+        let yDomainMin = (isFinite(yMin) ? yMin - pad : -pad);
+        let yDomainMax = (isFinite(yMax) ? yMax + pad : pad);
+        if (yDomainMin > 0) yDomainMin = 0;
+        if (yDomainMax < 0) yDomainMax = 0;
+
+        vis.yScale.domain([yDomainMin, yDomainMax]);
 
         vis.currentYear = year;
         vis.renderVis(grouped);
@@ -371,6 +378,19 @@ class Barchart {
                 return Math.abs(yPos - y0);
             })
             .attr('fill', d => vis.config.colorScale ? vis.config.colorScale(d.key) : '#999');
+const labels = vis.chart.selectAll('.label')
+    .data(grouped)
+    .join('text')
+    .attr('class', 'label')
+    .attr('x', d => vis.xScale(d.key) + vis.xScale.bandwidth() / 2)  // Center the label on the bar
+    .attr('y', d => vis.yScale(d.value) + 50)  // Position the label slightly above the top of the bar (adjust based on bar height)
+    .attr('text-anchor', 'middle')  // Center the text horizontally
+    .attr('fill', 'white')  // White text color for better contrast
+    .attr('font-size', '32px')  // Increase font size for better visibility
+    .attr('font-weight', 'bold')  // Make the text bold
+    .attr('stroke', 'black')  // Add a black stroke for contrast
+    .attr('stroke-width', '2px')  // Define stroke width
+    .text(d => d.key);  // Display the label (d.key or another property if needed)
 
         // Tooltip event listeners
         bars

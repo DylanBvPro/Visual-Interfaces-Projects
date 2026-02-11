@@ -1,4 +1,3 @@
-
 class Scatterplot {
 
     /**
@@ -7,7 +6,6 @@ class Scatterplot {
      * @param {Array} _actualData
      * @param {Array} _predictedData 
      */
-
     constructor(_config, _actualData, _predictedData) {
         const parent = document.querySelector(_config.parentElement);
 
@@ -32,7 +30,6 @@ class Scatterplot {
         this.years = [];
         this.initVis();
     }
-
 
     /**
      * We initialize scales/axes and append static elements, such as axis titles.
@@ -102,59 +99,81 @@ class Scatterplot {
     /**
      * Prepare the data and scales before we render it.
      */
-    updateVis() {
-        let vis = this;
+updateVis() {
+    let vis = this;
 
-        // Specify accessor functions for median-age dataset
-        vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
-        vis.xValue = d => +d.year || +d.Year || NaN;
-        vis.yValue = d => {
-            const totalRaw = d[vis.config.actualColumn];
-            const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
+    // Specify accessor functions for the data
+    vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
+    vis.xValue = d => +d.year || +d.Year || NaN;
+    vis.yValue = d => {
+        const totalRaw = d[vis.config.actualColumn];
+        const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
 
-            if (isFinite(total)) return total;
+        if (isFinite(total)) return total;
 
-            const projectedRaw = d[vis.config.projectedColumn];
-            const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
+        const projectedRaw = d[vis.config.projectedColumn];
+        const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
 
-            if (isFinite(projected)) return projected;
+        if (isFinite(projected)) return projected;
 
-            return NaN;
-        };
+        return NaN;
+    };
 
-        // Set the scale input domains (ignore NaN values)
-        const xVals = vis.data.map(vis.xValue).filter(v => !isNaN(v));
-        const yVals = vis.data.map(vis.yValue).filter(v => !isNaN(v));
+    // Set the scale input domains (ignore NaN values)
+    const xVals = vis.data.map(vis.xValue).filter(v => !isNaN(v));
+    const yVals = vis.data.map(vis.yValue).filter(v => !isNaN(v));
 
-        const xMin = d3.min(xVals);
-        const xMax = d3.max(xVals);
+    const xMin = d3.min(xVals);
+    const xMax = d3.max(xVals);
 
-        // if x values are valid numbers (years), set domain accordingly
-        if (isFinite(xMin) && isFinite(xMax)) {
-            vis.xScale.domain([xMin, xMax]);
+    // if x values are valid numbers (years), set domain accordingly
+    if (isFinite(xMin) && isFinite(xMax)) {
+        vis.xScale.domain([xMin, xMax]);
 
-            // compute decade-aligned tick values every 10 years
-            const startYear = Math.floor(xMin / 10) * 10;
-            const endYear = Math.ceil(xMax / 10) * 10;
-            const yearTicks = d3.range(startYear, endYear + 1, 10);
+        // compute decade-aligned tick values every 10 years
+        const startYear = Math.floor(xMin / 10) * 10;
+        const endYear = Math.ceil(xMax / 10) * 10;
+        const yearTicks = d3.range(startYear, endYear + 1, 10);
 
-            // apply integer formatting and explicit tick values (years only)
-            vis.xAxis.tickValues(yearTicks).tickFormat(d3.format("d"));
-        } else {
-            vis.xScale.domain(d3.extent(xVals));
-        }
-
-        // Set y domain to include negative values
-        const yMin = d3.min(yVals);
-        const yMax = d3.max(yVals);
-        const yRange = yMax - yMin;
-        vis.yScale.domain([
-            yMin - (yRange > 0 ? yRange * 0.05 : 1),
-            yMax + (yRange > 0 ? yRange * 0.05 : 1)
-        ]);
-
-        vis.renderVis();
+        // apply integer formatting and explicit tick values (years only)
+        vis.xAxis.tickValues(yearTicks).tickFormat(d3.format("d"));
+    } else {
+        vis.xScale.domain(d3.extent(xVals));
     }
+
+    // Set y domain to include negative values
+    const yMin = d3.min(yVals);
+    const yMax = d3.max(yVals);
+    const yRange = yMax - yMin;
+    vis.yScale.domain([
+        yMin - (yRange > 0 ? yRange * 0.05 : 1),
+        yMax + (yRange > 0 ? yRange * 0.05 : 1)
+    ]);
+
+    // Calculate the average point (mean of x and y) only if more than 1 data point exists for each year
+    vis.avgPointsByYear = d3.groups(vis.data, d => d[vis.config.yearColumn])
+        .map(([year, group]) => {
+            if (group.length > 1) {  // Only calculate average if there are more than 1 data point
+                const avgY = group.reduce((sum, d) => sum + vis.yValue(d), 0) / group.length;
+                return { year: +year, avgY: avgY };
+            }
+            return null;  // Return null for groups with 1 or fewer points
+        })
+        .filter(d => d !== null);  // Filter out null values from the array
+
+    // Average point for the whole dataset (not just grouped by year)
+    if (xVals.length > 0 && yVals.length > 0) {
+        vis.avgPoint = {
+            x: d3.mean(xVals),
+            y: d3.mean(yVals)
+        };
+    } else {
+        vis.avgPoint = null;
+    }
+
+    vis.renderVis();
+}
+
 
     /**
      * Bind data to visual elements.
@@ -162,7 +181,7 @@ class Scatterplot {
     renderVis() {
         let vis = this;
 
-        // Add circles
+        // Add circles for data points
         const circles = vis.chart.selectAll('.point')
             .data(vis.data.filter(d => !isNaN(vis.xValue(d)) && !isNaN(vis.yValue(d))), d => (d.code || d.Code || d.entity || d.Entity || d.trail))
             .join('circle')
@@ -175,19 +194,54 @@ class Scatterplot {
                 return vis.config.colorScale ? vis.config.colorScale(key) : '#999';
             });
 
-        // Tooltip event listeners
+        // Add average points for each year
+        vis.chart.selectAll('.avg-point')
+            .data(vis.avgPointsByYear)
+            .join('circle')
+            .attr('class', 'avg-point')
+            .attr('r', 6)
+            .attr('cx', d => vis.xScale(d.year))
+            .attr('cy', d => vis.yScale(d.avgY))
+            .attr('fill', '#FF6347')  // Use a distinct color for the average points
+            .attr('stroke', '#FFD700')
+            .attr('stroke-width', 2)
+            .attr('opacity', 0.9);
+
+        // Tooltip for average points
+        vis.chart.selectAll('.avg-point')
+            .on('mouseover', (event, d) => {
+                d3.select('#tooltip')
+                    .style('display', 'block')
+                    .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
+                    .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
+                    .style('background-color', 'rgba(255,255,255,0.95)')
+                    .style('border', '1px solid #ccc')
+                    .style('border-radius', '8px')
+                    .style('padding', '10px 15px')
+                    .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+                    .style('font-family', 'Arial, sans-serif')
+                    .style('font-size', '16px')
+                    .style('color', '#333')
+                    .html(`
+                        <div style="font-weight: bold; font-size: 18px;">Average Point</div>
+                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
+                            <li>Year: <strong>${d.year}</strong></li>
+                            <li>Average X (Year): <strong>${d.year}</strong></li>
+                            <li>Average Y (Value): <strong>${d.avgY.toFixed(2)}</strong></li>
+                        </ul>
+                    `);
+            })
+            .on('mouseleave', () => {
+                d3.select('#tooltip').style('display', 'none');
+            });
+
+        // Tooltip for regular data points
         circles
             .on('mouseover', (event, d) => {
-                // ===== Determine which value to display =====
                 const totalRaw = d[vis.config.actualColumn];
-                const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== ''
-                    ? Number(totalRaw)  // only convert if valid number
-                    : null;             // use null instead of NaN or 0
-
+                const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? Number(totalRaw) : null;
                 const projectedRaw = d[vis.config.projectedColumn];
-                const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== ''
-                    ? Number(projectedRaw)
-                    : null;
+                const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? Number(projectedRaw) : null;
 
                 let valueLabel = '';
                 let valueNumber = NaN;
@@ -220,32 +274,23 @@ class Scatterplot {
                     .style('font-size', '16px')
                     .style('color', '#333')
                     .html(`
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-            <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
-            ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
-        </div>
-        <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
-        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-            <li>${valueLabel}: <strong>${isFinite(valueNumber) ? valueNumber.toFixed(2) : valueNumber}</strong></li>
-        </ul>
-      `);
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                            <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
+                            ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
+                        </div>
+                        <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
+                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
+                            <li>${valueLabel}: <strong>${isFinite(valueNumber) ? valueNumber.toFixed(2) : valueNumber}</strong></li>
+                        </ul>
+                    `);
             })
             .on('mouseleave', () => {
                 d3.select('#tooltip').style('display', 'none');
             });
 
-
-
-
         // Update the axes/gridlines
-        // We use the second .call() to remove the axis and just show gridlines
-        vis.xAxisG
-            .call(vis.xAxis)
-            .call(g => g.select('.domain').remove());
-
-        vis.yAxisG
-            .call(vis.yAxis)
-            .call(g => g.select('.domain').remove())
+        vis.xAxisG.call(vis.xAxis).call(g => g.select('.domain').remove());
+        vis.yAxisG.call(vis.yAxis).call(g => g.select('.domain').remove());
     }
 
     resize() {
@@ -280,9 +325,6 @@ class Scatterplot {
         const approxYTickSpacing = 50;
         this.yAxis.ticks(Math.max(2, Math.floor(this.height / approxYTickSpacing)));
     }
-
-
-
 }
 
 function getFlagUrl(countryCode) {
@@ -296,5 +338,3 @@ function getFlagUrl(countryCode) {
         ? `https://flagcdn.com/64x48/${iso2.toLowerCase()}.png`
         : '';
 }
-
-
