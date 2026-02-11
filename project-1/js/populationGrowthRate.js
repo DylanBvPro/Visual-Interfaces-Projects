@@ -12,35 +12,35 @@ const defaultSelectedCodes = ['USA', 'CHN', 'IND']; // Example, adjust as needed
 /**
  * Load data from CSV file asynchronously and render charts
  */
-d3.csv('../data/median-age.csv')
+d3.csv('../data/population-growth-rates.csv')
   .then(_data => {
     data = _data;
-
+    
     // Cast numeric values - be careful with empty strings
     data.forEach(d => {
-      const medianTotal = d["Median age, total"]?.trim();
-      const medianProjected = d["Median age (Projected)"]?.trim();
+      const growthTotal = d["Growth rate, total"]?.trim();
+      const growthProjected = d["Population growth rate (%) (Projected)"]?.trim();
       
-      d["Median age, total"] = medianTotal ? +medianTotal : NaN;
-      d["Median age (Projected)"] = medianProjected ? +medianProjected : NaN;
+      d["Growth rate, total"] = growthTotal ? +growthTotal : NaN;
+      d["Population growth rate (%) (Projected)"] = growthProjected ? +growthProjected : NaN;
       d.Year = +d.Year || +d.Years;
     });
 
-    // Prepare data for scatterplot / focus
-    const parseYear = d => {
-      const y = (+d.Year) || (+d.year);
-      return Number.isFinite(y) ? new Date(y, 0, 1) : null;
-    };
+    // Prepare data for the Barchart
+    const actualData = data.filter(d => !isNaN(d["Growth rate, total"]));
+    const predictedData = data.filter(d => isNaN(d["Growth rate, total"]) && !isNaN(d["Population growth rate (%) (Projected)"]));
 
+    // Prepare data for scatterplot/focus
     datafocus = data.map(d => ({
-      date: parseYear(d),
-      close: !isNaN(d["Median age, total"]) ? d["Median age, total"] : d["Median age (Projected)"],
+      date: new Date(d.Year, 0, 1),
+      close: !isNaN(d["Growth rate, total"]) ? d["Growth rate, total"] : d["Population growth rate (%) (Projected)"],
       Code: d.Code || d.code || '',
       Entity: d.Entity || d.entity || ''
     })).filter(d => d.date instanceof Date && !isNaN(d.date) && !isNaN(d.close));
 
     console.log('rows loaded:', data.length);
-    console.log('datafocus length:', datafocus.length, datafocus.slice(0,5));
+    console.log('actualData length:', actualData.length, actualData.slice(0,5));
+    console.log('predictedData length:', predictedData.length, predictedData.slice(0,5));
 
     // Initialize color scale
     const codes = Array.from(new Set(data.map(d => (d.Code || d.code || '').trim()).filter(Boolean))).sort();
@@ -58,37 +58,34 @@ d3.csv('../data/median-age.csv')
 
     colorByCode = Object.fromEntries(codes.map(c => [c, colorScale(c)]));
 
-    // Split data for Barchart: actual vs projected
-    const actualData = data.filter(d => !isNaN(d["Median age, total"]));
-    const predictedData = data.filter(d => isNaN(d["Median age, total"]) && !isNaN(d["Median age (Projected)"]));
-
     // Initialize scatterplot
     scatterplot = new Scatterplot({ 
       parentElement: '#scatterplot',
       colorScale: colorScale,
-      actualColumn: 'Median age, total',
-      projectedColumn: 'Median age (Projected)',
+      actualColumn: 'Growth rate, total',
+      projectedColumn: 'Population growth rate (%) (Projected)',
       yearColumn: 'Year',
       codeColumn: 'Code',
       groupColumn: 'Entity',
-      yAxisName: 'Median Age'
+      yAxisName: 'Population Growth Rate (%)'
     }, actualData, predictedData);
 
-    scatterplot.updateVis(0);
+    scatterplot.updateVis();
 
     // Initialize barchart
     barchart = new Barchart({
       parentElement: '#barchart',
       colorScale: colorScale,
-      actualColumn: 'Median age, total',
-      projectedColumn: 'Median age (Projected)',
+      actualColumn: 'Growth rate, total',
+      projectedColumn: 'Population growth rate (%) (Projected)',
       yearColumn: 'Year',
       codeColumn: 'Code',
       groupColumn: 'Entity',
-      yAxisName: 'Median Age'
+      yAxisName: 'Population Growth Rate (%)'
     }, actualData, predictedData);
 
-    barchart.updateYear(0); // render the first year
+    // Start with first year
+    barchart.updateYear(0);
 
     // Initialize focus context
     focusContextVis = new FocusContextVis({
@@ -107,11 +104,11 @@ d3.csv('../data/median-age.csv')
       barchart.updateVis(data.filter(d => selectedCodes.includes(d.Code || d.code || '')));
     }, defaultSelectedCodes);
 
+    // Apply default filter
     filterData(defaultSelectedCodes);
 
   })
   .catch(error => console.error(error));
-
 
 /**
  * Filter scatterplot and barchart based on selected countries
@@ -119,16 +116,22 @@ d3.csv('../data/median-age.csv')
  */
 function filterData(selectedCodes) {
   if (!selectedCodes || selectedCodes.length === 0) {
-    scatterplot.data = data; 
+    scatterplot.actualData = data.filter(d => !isNaN(d["Growth rate, total"]));
+    scatterplot.predictedData = data.filter(d => isNaN(d["Growth rate, total"]) && !isNaN(d["Population growth rate (%) (Projected)"]));
+    scatterplot.data = [...scatterplot.actualData, ...scatterplot.predictedData];
+    
     barchart.data = data; 
   } else {
-    scatterplot.data = data.filter(d => selectedCodes.includes(d.Code || d.code || ''));
-    barchart.data = data.filter(d => selectedCodes.includes(d.Code || d.code || ''));
+    const filtered = data.filter(d => selectedCodes.includes(d.Code || d.code || ''));
+    scatterplot.actualData = filtered.filter(d => !isNaN(d["Growth rate, total"]));
+    scatterplot.predictedData = filtered.filter(d => isNaN(d["Growth rate, total"]) && !isNaN(d["Population growth rate (%) (Projected)"]));
+    scatterplot.data = [...scatterplot.actualData, ...scatterplot.predictedData];
+    
+    barchart.data = filtered;
   }
   scatterplot.updateVis();
   barchart.updateVis();
 }
-
 
 function resizeVisualizations() {
   if (scatterplot) {

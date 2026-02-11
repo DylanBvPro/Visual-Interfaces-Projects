@@ -3,22 +3,33 @@ class Scatterplot {
 
     /**
      * Class constructor with basic chart configuration
-     * @param {Object}
-     * @param {Array}
+     * @param {Object} _config
+     * @param {Array} _actualData
+     * @param {Array} _predictedData 
      */
 
-    constructor(_config, _data) {
+    constructor(_config, _actualData, _predictedData) {
         const parent = document.querySelector(_config.parentElement);
 
         this.config = {
             parentElement: _config.parentElement,
             colorScale: _config.colorScale,
+            xAxisName: _config.xAxisName || 'Entity',
+            yAxisName: _config.yAxisName || 'Value',
+            groupColumn: _config.groupColumn || 'Entity',   // x-axis categories
+            codeColumn: _config.codeColumn || 'Code',       // for flags or IDs
+            yearColumn: _config.yearColumn || 'Year',       // year column
+            actualColumn: _config.actualColumn,
+            projectedColumn: _config.projectedColumn,
             containerWidth: parent ? parent.clientWidth : (_config.containerWidth || 2000),
             containerHeight: parent ? parent.clientHeight : (_config.containerHeight || 300),
             margin: _config.margin || { top: 25, right: 20, bottom: 20, left: 35 },
             tooltipPadding: _config.tooltipPadding || 15
         };
-        this.data = _data;
+        this.actualData = _actualData || [];
+        this.predictedData = _predictedData || [];
+        this.data = [...this.actualData, ...this.predictedData]; // combine for year extraction
+        this.years = [];
         this.initVis();
     }
 
@@ -50,7 +61,7 @@ class Scatterplot {
             .ticks(6)
             .tickSize(-vis.width - 10)
             .tickPadding(10)
-            .tickFormat(d3.format(".1f")); // median age with one decimal
+            .tickFormat(d3.format(".1f"));
 
         // Define size of SVG drawing area
         vis.svg = d3.select(vis.config.parentElement)
@@ -85,7 +96,7 @@ class Scatterplot {
             .attr('x', 0)
             .attr('y', 0)
             .attr('dy', '.71em')
-            .text('Median Age');
+            .text(vis.config.yAxisName);
     }
 
     /**
@@ -98,12 +109,12 @@ class Scatterplot {
         vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
         vis.xValue = d => +d.year || +d.Year || NaN;
         vis.yValue = d => {
-            const totalRaw = d['Median age, total'];
+            const totalRaw = d[vis.config.actualColumn];
             const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
 
             if (isFinite(total)) return total;
 
-            const projectedRaw = d['Median age (Projected)'];
+            const projectedRaw = d[vis.config.projectedColumn];
             const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
 
             if (isFinite(projected)) return projected;
@@ -133,7 +144,14 @@ class Scatterplot {
             vis.xScale.domain(d3.extent(xVals));
         }
 
-        vis.yScale.domain([0, d3.max(yVals) || 1]);
+        // Set y domain to include negative values
+        const yMin = d3.min(yVals);
+        const yMax = d3.max(yVals);
+        const yRange = yMax - yMin;
+        vis.yScale.domain([
+            yMin - (yRange > 0 ? yRange * 0.05 : 1),
+            yMax + (yRange > 0 ? yRange * 0.05 : 1)
+        ]);
 
         vis.renderVis();
     }
@@ -161,23 +179,27 @@ class Scatterplot {
         circles
             .on('mouseover', (event, d) => {
                 // ===== Determine which value to display =====
-                const totalRaw = d['Median age, total'];
-                const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
+                const totalRaw = d[vis.config.actualColumn];
+                const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== ''
+                    ? Number(totalRaw)  // only convert if valid number
+                    : null;             // use null instead of NaN or 0
 
-                const projectedRaw = d['Median age (Projected)'];
-                const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
+                const projectedRaw = d[vis.config.projectedColumn];
+                const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== ''
+                    ? Number(projectedRaw)
+                    : null;
 
                 let valueLabel = '';
                 let valueNumber = NaN;
 
                 if (isFinite(total)) {
-                    valueLabel = 'Median Age';
+                    valueLabel = vis.config.actualColumn;
                     valueNumber = total;
                 } else if (isFinite(projected)) {
-                    valueLabel = 'Projected Median Age';
+                    valueLabel = vis.config.projectedColumn;
                     valueNumber = projected;
                 } else {
-                    valueLabel = 'Median Age';
+                    valueLabel = vis.config.actualColumn;
                     valueNumber = 'N/A';
                 }
 
@@ -264,6 +286,11 @@ class Scatterplot {
 }
 
 function getFlagUrl(countryCode) {
+    // Check if getCountryISO2 is defined before calling
+    if (typeof getCountryISO2 !== 'function') {
+        console.warn('getCountryISO2 not loaded yet');
+        return '';
+    }
     const iso2 = getCountryISO2(countryCode);
     return iso2
         ? `https://flagcdn.com/64x48/${iso2.toLowerCase()}.png`

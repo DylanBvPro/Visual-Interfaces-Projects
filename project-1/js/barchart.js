@@ -3,20 +3,29 @@
 class Barchart {
     /**
      * Class constructor with basic chart configuration
-     * @param {Object}
-     * @param {Array}
+     * @param {Object} _config - chart config (parent, margins, axes names, etc.)
+     * @param {Array} _actualData - dataset for actual values
+     * @param {Array} _predictedData - dataset for projected/fallback values
      */
 
-    constructor(_config, _data) {
+    constructor(_config, _actualData, _predictedData) {
         const parent = document.querySelector(_config.parentElement);
         this.config = {
+            xAxisName: _config.xAxisName || 'Entity',
+            yAxisName: _config.yAxisName || 'Value',
+            groupColumn: _config.groupColumn || 'Entity',   // x-axis categories
+            codeColumn: _config.codeColumn || 'Code',       // for flags or IDs
+            yearColumn: _config.yearColumn || 'Year',       // year column
+            actualColumn: _config.actualColumn,
+            projectedColumn: _config.projectedColumn,
             parentElement: _config.parentElement,
             colorScale: _config.colorScale,
             margin: _config.margin || { top: 25, right: 20, bottom: 20, left: 35 },
             tooltipPadding: _config.tooltipPadding || 15
         };
-        this.data = _data;
-        this.displayData = _data;
+        this.actualData = _actualData || [];
+        this.predictedData = _predictedData || [];
+        this.data = [...this.actualData, ...this.predictedData]; // combined for year extraction
         this.years = [];
         this.currentYearIndex = 0;
         this.isPlaying = false;
@@ -85,7 +94,7 @@ class Barchart {
             .attr('x', -vis.height / 0.45)
             .attr('y', -vis.config.margin.left + 12)
             .style('text-anchor', 'middle')
-            .text('Median Age');
+            .text(vis.config.yAxisName);
 
         // Create year selector controls
         vis.initYearControls();
@@ -235,16 +244,15 @@ class Barchart {
         vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
 
         vis.yValue = d => {
-            const totalRaw = d['Median age, total'];
-            const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
-            if (isFinite(total)) return total;
+            const actualRaw = d[vis.config.actualColumn];
+            const actual = actualRaw !== null && actualRaw !== undefined && actualRaw !== '' ? +actualRaw : NaN;
 
-            const projectedRaw = d['Median age (Projected)'];
+            const projectedRaw = d[vis.config.projectedColumn];
             const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
-            if (isFinite(projected)) return projected;
 
-            return NaN;
+            return isFinite(actual) ? actual : projected;
         };
+
 
         vis.yearValue = d => +d.year || +d.Year || NaN;
 
@@ -267,8 +275,8 @@ class Barchart {
                 dataForYear,
                 v => {
                     const row = v[0]; // take the first row
-                    const actual = row['Median age, total'] !== undefined && row['Median age, total'] !== '' ? +row['Median age, total'] : NaN;
-                    const projected = row['Median age (Projected)'] !== undefined && row['Median age (Projected)'] !== '' ? +row['Median age (Projected)'] : NaN;
+                    const actual = row[vis.config.actualColumn] !== undefined && row[vis.config.actualColumn] !== '' ? +row[vis.config.actualColumn] : NaN;
+                    const projected = row[vis.config.projectedColumn] !== undefined && row[vis.config.projectedColumn] !== '' ? +row[vis.config.projectedColumn] : NaN;
                     const value = isFinite(actual) ? actual : projected;
 
                     return {
@@ -289,7 +297,13 @@ class Barchart {
 
         // Update scales
         vis.xScale.domain(grouped.map(d => d.key));
-        vis.yScale.domain([0, d3.max(grouped, d => d.value) || 1]);
+        const yMin = d3.min(grouped, d => d.value);
+        const yMax = d3.max(grouped, d => d.value);
+        const yRange = yMax - yMin;
+        vis.yScale.domain([
+            yMin - (yRange > 0 ? yRange * 0.05 : 1),
+            yMax + (yRange > 0 ? yRange * 0.05 : 1)
+        ]);
 
         vis.currentYear = year;
         vis.renderVis(grouped);
@@ -299,14 +313,14 @@ class Barchart {
             const d = d3.select(vis.hoveredBar).datum();
             const flagUrl = getFlagUrl(d.code);
 
-            let valueLabel = 'Median Age';
+            let valueLabel = vis.config.actualColumn;
             let displayValue = d.actual;
             if (!isFinite(d.actual) && isFinite(d.projected)) {
-                valueLabel = 'Projected Median Age';
+                valueLabel = vis.config.projectedColumn;
                 displayValue = d.projected;
             }
 
-            const medianAge = isFinite(displayValue) ? displayValue.toFixed(2) : 'N/A';
+            const valueDisplay = isFinite(displayValue) ? displayValue.toFixed(2) : 'N/A';
             const yearText = isFinite(d.year) ? d.year : 'Unknown';
 
             d3.select('#tooltip')
@@ -326,7 +340,7 @@ class Barchart {
         </div>
         <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>Year: ${yearText}</i></div>
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-            <li>${valueLabel}: <strong>${medianAge}</strong></li>
+            <li>${valueLabel}: <strong>${valueDisplay}</strong></li>
         </ul>
       `);
         }
@@ -346,8 +360,16 @@ class Barchart {
             .attr('class', 'bar')
             .attr('x', d => vis.xScale(d.key))
             .attr('width', d => vis.xScale.bandwidth())
-            .attr('y', d => vis.yScale(d.value))
-            .attr('height', d => vis.height - vis.yScale(d.value))
+            .attr('y', d => {
+                const yPos = vis.yScale(d.value);
+                const y0 = vis.yScale(0);
+                return d.value >= 0 ? yPos : y0;
+            })
+            .attr('height', d => {
+                const yPos = vis.yScale(d.value);
+                const y0 = vis.yScale(0);
+                return Math.abs(yPos - y0);
+            })
             .attr('fill', d => vis.config.colorScale ? vis.config.colorScale(d.key) : '#999');
 
         // Tooltip event listeners
@@ -356,15 +378,15 @@ class Barchart {
                 vis.hoveredBar = event.currentTarget;
 
                 // ===== Determine which value to show =====
-                let valueLabel = 'Median Age';
+                let valueLabel = vis.config.actualColumn;
                 let displayValue = d.actual;
 
                 if (!isFinite(d.actual) && isFinite(d.projected)) {
-                    valueLabel = 'Projected Median Age';
+                    valueLabel = vis.config.projectedColumn;
                     displayValue = d.projected;
                 }
 
-                const medianAge = isFinite(displayValue) ? displayValue.toFixed(2) : 'N/A';
+                const valueDisplay = isFinite(displayValue) ? displayValue.toFixed(2) : 'N/A';
                 const yearText = isFinite(d.year) ? d.year : 'Unknown';
 
                 // ===== Flag =====
@@ -390,12 +412,26 @@ class Barchart {
         </div>
         <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>Year: ${yearText}</i></div>
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-            <li>${valueLabel}: <strong>${medianAge}</strong></li>
+            <li>${valueLabel}: <strong>${valueDisplay}</strong></li>
         </ul>
       `);
             })
 
 
+
+        // Add zero-line for reference
+        vis.chart.selectAll('.zero-line').remove();
+        if (vis.yScale(0) >= 0 && vis.yScale(0) <= vis.height) {
+            vis.chart.append('line')
+                .attr('class', 'zero-line')
+                .attr('x1', 0)
+                .attr('x2', vis.width)
+                .attr('y1', vis.yScale(0))
+                .attr('y2', vis.yScale(0))
+                .attr('stroke', '#999')
+                .attr('stroke-dasharray', '4')
+                .attr('opacity', 0.5);
+        }
 
         // Update the axes
         vis.xAxisG
@@ -411,6 +447,11 @@ class Barchart {
 }
 
 function getFlagUrl(countryCode) {
+    // Check if getCountryISO2 is defined before calling
+    if (typeof getCountryISO2 !== 'function') {
+        console.warn('getCountryISO2 not loaded yet');
+        return '';
+    }
     const iso2 = getCountryISO2(countryCode);
     return iso2
         ? `https://flagcdn.com/64x48/${iso2.toLowerCase()}.png`
