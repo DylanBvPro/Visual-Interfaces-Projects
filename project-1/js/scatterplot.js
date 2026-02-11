@@ -79,21 +79,6 @@ class Scatterplot {
         vis.yAxisG = vis.chart.append('g')
             .attr('class', 'axis y-axis');
 
-        // Append both axis titles
-        vis.chart.append('text')
-            .attr('class', 'axis-title')
-            .attr('y', vis.height - 15)
-            .attr('x', vis.width + 10)
-            .attr('dy', '.71em')
-            .style('text-anchor', 'end')
-            .text('Year');
-
-        vis.svg.append('text')
-            .attr('class', 'axis-title')
-            .attr('x', 0)
-            .attr('y', 0)
-            .attr('dy', '.71em')
-            .text(vis.config.yAxisName);
     }
 
     /**
@@ -172,6 +157,26 @@ updateVis() {
     }
 
     vis.renderVis();
+
+    vis.chart.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
+    vis.svg.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
+
+    // Append x-axis title
+    vis.chart.append('text')
+        .attr('class', 'axis-title')
+        .attr('y', vis.height - 15)
+        .attr('x', vis.width + 10)
+        .attr('dy', '.71em')
+        .style('text-anchor', 'end')
+        .text('Year');
+
+    // Append y-axis title
+    vis.svg.append('text')
+        .attr('class', 'axis-title')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('dy', '.71em')
+        .text(vis.config.yAxisName);
 }
 
 

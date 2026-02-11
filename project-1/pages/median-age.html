@@ -57,6 +57,50 @@
             /* helps with tooltips */
             margin-bottom: clamp(1rem, 5vw, 5rem);
         }
+
+         /* Styling for the dropdown */
+        #variable-dropdown {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #4b4b4e, #848691);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #variable-dropdown:hover {
+            background-color: #8c8d97;
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #variable-dropdown:focus {
+            outline: none;
+            border: 2px solid #b1b1b4;
+        }
+
+        /* Position the dropdown on the right */
+        #dropdown-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+
+        /* Adjust for responsiveness */
+        @media (max-width: 768px) {
+            #dropdown-container {
+                justify-content: center; /* Center on smaller screens */
+                margin-top: 10px;
+            }
+
+            #variable-dropdown {
+                width: 100%; /* Full width on smaller screens */
+                max-width: 250px;
+            }
+        }
     </style>
 
     <header>
@@ -73,6 +117,17 @@
 
     <!-- Country selector (search + checkboxes) -->
     <div id="page-content">
+
+    <div id="dropdown-container">
+        <label for="variable-dropdown" style="font-weight: bold; display: flex; align-items: center; justify-content: center;">Select Data Variable:</label>
+        <select id="variable-dropdown">
+            <option value="medianAge">Median Age</option>
+            <option value="populationGrowth">Population Growth Rate</option>
+            <option value="lifeExpectancy">Life Expectancy</option>
+            <!-- Add more options as needed -->
+        </select>
+    </div>
+
         <div id="chart-container" style="display: flex; gap: 20px; width: 100%; overflow: auto;">
             <svg id="scatterplot" style="flex: 1; overflow: auto;"></svg>
             <div id="country-filters"></div>

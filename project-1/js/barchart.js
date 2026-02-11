@@ -463,6 +463,7 @@ const labels = vis.chart.selectAll('.label')
             .call(g => g.select('.domain').remove());
     }
 
+    
 
 }
 
@@ -477,3 +478,4 @@ function getFlagUrl(countryCode) {
         ? `https://flagcdn.com/64x48/${iso2.toLowerCase()}.png`
         : '';
 }
+
