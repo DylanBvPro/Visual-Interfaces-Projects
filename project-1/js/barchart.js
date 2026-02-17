@@ -106,8 +106,12 @@ class Barchart {
      */
     initYearControls() {
         let vis = this;
-        vis.years = vis.getYears();
-        if (vis.years.length === 0) return;
+    // ✅ REMOVE old controls first
+    const oldControls = document.getElementById('year-controls');
+    if (oldControls) oldControls.remove();
+
+    vis.years = vis.getYears();
+    if (vis.years.length === 0) return;
 
         // Create container for controls
         const controlsDiv = document.createElement('div');
@@ -122,7 +126,7 @@ class Barchart {
 
         // Play/Pause button
         const playBtn = document.createElement('button');
-        playBtn.id = 'play-btn';
+        playBtn.id = 'scroll-play-btn';
         playBtn.textContent = 'Play';
         playBtn.onclick = () => vis.togglePlay();
         controlsDiv.appendChild(playBtn);
@@ -168,8 +172,8 @@ class Barchart {
         if (document.getElementById('year-display')) {
             document.getElementById('year-display').textContent = year;
         }
-        if (document.getElementById('year-slider')) {
-            document.getElementById('year-slider').value = index;
+        if (document.getElementById('scroll-play-btn')) {
+            document.getElementById('scroll-play-btn').value = index;
         }
         vis.updateVis(null, year);
     }
@@ -180,7 +184,7 @@ class Barchart {
     togglePlay() {
         let vis = this;
         vis.isPlaying = !vis.isPlaying;
-        const playBtn = document.getElementById('play-btn');
+        const playBtn = document.getElementById('scroll-play-btn');
         if (playBtn) {
             playBtn.textContent = vis.isPlaying ? 'Pause' : 'Play';
         }

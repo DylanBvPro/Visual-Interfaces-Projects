@@ -55,7 +55,7 @@
             /* optional fallback */
             position: relative;
             /* helps with tooltips */
-            margin-bottom: clamp(1rem, 5vw, 5rem);
+            margin-bottom: clamp(0rem, 0vw, 0rem);
         }
 
          /* Styling for the dropdown */
@@ -140,10 +140,11 @@
 
         <svg id="chart"></svg>
 
+        <div id="map"></div>
+
         <div class="source">
             Source: Data from <a href="https/link">link.com</a>
         </div>
-
 
         <!-- D3 bundle -->
         <script src="../js/d3.v6.min.js"></script>
@@ -153,6 +154,8 @@
         <script src="../js/barchart.js"></script>
         <script src="../js/focusContextVis.js"></script>
         <!-- Our JS code - INCLUDING the new files-->
+        <script src="../js/choroplethMap.js"></script>
+        <script src="../js/topojson.v3.js"></script>
         <script src="../js/main.js"></script>
     </div>
 

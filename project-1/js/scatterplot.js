@@ -84,100 +84,112 @@ class Scatterplot {
     /**
      * Prepare the data and scales before we render it.
      */
-updateVis() {
-    let vis = this;
+    updateVis() {
+        let vis = this;
 
-    // Specify accessor functions for the data
-    vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
-    vis.xValue = d => +d.year || +d.Year || NaN;
-    vis.yValue = d => {
-        const totalRaw = d[vis.config.actualColumn];
-        const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
+        // Specify accessor functions for the data
+        vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
+        vis.xValue = d => +d.year || +d.Year || NaN;
+        vis.yValue = d => {
+            const totalRaw = d[vis.config.actualColumn];
+            const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
 
-        if (isFinite(total)) return total;
+            if (isFinite(total)) return total;
 
-        const projectedRaw = d[vis.config.projectedColumn];
-        const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
+            const projectedRaw = d[vis.config.projectedColumn];
+            const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
 
-        if (isFinite(projected)) return projected;
+            if (isFinite(projected)) return projected;
 
-        return NaN;
-    };
-
-    // Set the scale input domains (ignore NaN values)
-    const xVals = vis.data.map(vis.xValue).filter(v => !isNaN(v));
-    const yVals = vis.data.map(vis.yValue).filter(v => !isNaN(v));
-
-    const xMin = d3.min(xVals);
-    const xMax = d3.max(xVals);
-
-    // if x values are valid numbers (years), set domain accordingly
-    if (isFinite(xMin) && isFinite(xMax)) {
-        vis.xScale.domain([xMin, xMax]);
-
-        // compute decade-aligned tick values every 10 years
-        const startYear = Math.floor(xMin / 10) * 10;
-        const endYear = Math.ceil(xMax / 10) * 10;
-        const yearTicks = d3.range(startYear, endYear + 1, 10);
-
-        // apply integer formatting and explicit tick values (years only)
-        vis.xAxis.tickValues(yearTicks).tickFormat(d3.format("d"));
-    } else {
-        vis.xScale.domain(d3.extent(xVals));
-    }
-
-    // Set y domain to include negative values
-    const yMin = d3.min(yVals);
-    const yMax = d3.max(yVals);
-    const yRange = yMax - yMin;
-    vis.yScale.domain([
-        yMin - (yRange > 0 ? yRange * 0.05 : 1),
-        yMax + (yRange > 0 ? yRange * 0.05 : 1)
-    ]);
-
-    // Calculate the average point (mean of x and y) only if more than 1 data point exists for each year
-    vis.avgPointsByYear = d3.groups(vis.data, d => d[vis.config.yearColumn])
-        .map(([year, group]) => {
-            if (group.length > 1) {  // Only calculate average if there are more than 1 data point
-                const avgY = group.reduce((sum, d) => sum + vis.yValue(d), 0) / group.length;
-                return { year: +year, avgY: avgY };
-            }
-            return null;  // Return null for groups with 1 or fewer points
-        })
-        .filter(d => d !== null);  // Filter out null values from the array
-
-    // Average point for the whole dataset (not just grouped by year)
-    if (xVals.length > 0 && yVals.length > 0) {
-        vis.avgPoint = {
-            x: d3.mean(xVals),
-            y: d3.mean(yVals)
+            return NaN;
         };
-    } else {
-        vis.avgPoint = null;
+
+        // Set the scale input domains (ignore NaN values)
+        const xVals = vis.data.map(vis.xValue).filter(v => !isNaN(v));
+        const yVals = vis.data.map(vis.yValue).filter(v => !isNaN(v));
+
+        const xMin = d3.min(xVals);
+        const xMax = d3.max(xVals);
+
+        // if x values are valid numbers (years), set domain accordingly
+        if (isFinite(xMin) && isFinite(xMax)) {
+            vis.xScale.domain([xMin, xMax]);
+
+            // compute decade-aligned tick values every 10 years
+            const startYear = Math.floor(xMin / 10) * 10;
+            const endYear = Math.ceil(xMax / 10) * 10;
+            const yearTicks = d3.range(startYear, endYear + 1, 10);
+
+            // apply integer formatting and explicit tick values (years only)
+            vis.xAxis.tickValues(yearTicks).tickFormat(d3.format("d"));
+        } else {
+            vis.xScale.domain(d3.extent(xVals));
+        }
+
+        // Set y domain to include negative values
+        const yMin = d3.min(yVals);
+        const yMax = d3.max(yVals);
+        const yRange = yMax - yMin;
+        vis.yScale.domain([
+            yMin - (yRange > 0 ? yRange * 0.05 : 1),
+            yMax + (yRange > 0 ? yRange * 0.05 : 1)
+        ]);
+
+        // Calculate the average point (mean of x and y) only if more than 1 data point exists for each year
+        vis.avgPointsByYear = d3.groups(vis.data, d => d[vis.config.yearColumn])
+            .map(([year, group]) => {
+                if (group.length > 1) {  // Only calculate average if there are more than 1 data point
+                    const avgY = group.reduce((sum, d) => sum + vis.yValue(d), 0) / group.length;
+                    return { year: +year, avgY: avgY };
+                }
+                return null;  // Return null for groups with 1 or fewer points
+            })
+            .filter(d => d !== null);  // Filter out null values from the array
+
+        // Average point for the whole dataset (not just grouped by year)
+        if (xVals.length > 0 && yVals.length > 0) {
+            vis.avgPoint = {
+                x: d3.mean(xVals),
+                y: d3.mean(yVals)
+            };
+        } else {
+            vis.avgPoint = null;
+        }
+
+        vis.renderVis();
+
+        vis.chart.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
+        vis.svg.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
+
+        // Append x-axis title
+        vis.chart.append('text')
+            .attr('class', 'axis-title')
+            .attr('y', vis.height - 15)
+            .attr('x', vis.width + 10)
+            .attr('dy', '.71em')
+            .style('text-anchor', 'end')
+            .text('Year');
+
+        // Append y-axis title
+        vis.svg.append('text')
+            .attr('class', 'axis-title')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('dy', '.71em')
+            .text(vis.config.yAxisName);
+        vis.zoom = d3.zoom()
+            .scaleExtent([0.9, 8]) // Min and max zoom
+            .translateExtent([
+                [0, 0], // Top-left corner (min x, min y)
+                [vis.width, vis.height] // Bottom-right corner (max x, max y)
+            ])
+            .on('zoom', (event) => {
+                vis.chart.attr('transform', event.transform);
+            });
+
+        // Apply zoom to SVG
+        vis.svg.call(vis.zoom);
     }
-
-    vis.renderVis();
-
-    vis.chart.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
-    vis.svg.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
-
-    // Append x-axis title
-    vis.chart.append('text')
-        .attr('class', 'axis-title')
-        .attr('y', vis.height - 15)
-        .attr('x', vis.width + 10)
-        .attr('dy', '.71em')
-        .style('text-anchor', 'end')
-        .text('Year');
-
-    // Append y-axis title
-    vis.svg.append('text')
-        .attr('class', 'axis-title')
-        .attr('x', 0)
-        .attr('y', 0)
-        .attr('dy', '.71em')
-        .text(vis.config.yAxisName);
-}
 
 
     /**
@@ -294,7 +306,44 @@ updateVis() {
             });
 
         // Update the axes/gridlines
-        vis.xAxisG.call(vis.xAxis).call(g => g.select('.domain').remove());
+        vis.xAxisG
+            .call(vis.xAxis)
+            .call(g => g.select('.domain').remove())
+            .call(g => {
+                // Dynamically adjust x-axis labels to avoid overlap
+                const labels = g.selectAll('.tick text');
+                const tickCount = labels.size();
+                const spacing = tickCount > 1 ? vis.width / (tickCount - 1) : vis.width;
+
+                labels.style('font-size', '12px').style('fill', '#000');
+
+                if (spacing < 40) {
+                    // Rotate labels when narrow
+                    labels
+                        .attr('transform', 'rotate(-45)')
+                        .style('text-anchor', 'end')
+                        .attr('dx', '-0.5em')
+                        .attr('dy', '0.15em');
+                } else {
+                    labels
+                        .attr('transform', null)
+                        .style('text-anchor', 'middle')
+                        .attr('dx', null)
+                        .attr('dy', null);
+                }
+
+                if (spacing < 20) {
+                    // If extremely narrow, only show every Nth label
+                    const minVisible = 20; // px per label
+                    const n = Math.max(1, Math.ceil(minVisible / spacing));
+                    labels.each(function(d, i) {
+                        d3.select(this).style('display', (i % n === 0) ? null : 'none');
+                    });
+                } else {
+                    labels.style('display', null);
+                }
+            });
+
         vis.yAxisG.call(vis.yAxis).call(g => g.select('.domain').remove());
     }
 
