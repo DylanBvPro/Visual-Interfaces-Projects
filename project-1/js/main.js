@@ -1,4 +1,4 @@
-console.log("Hello world");
+console.log("ran main.js");
 
 // Global objects
 let data, scatterplot, barchart;
@@ -31,6 +31,24 @@ const dataOptions = {
         actualColumn: 'Growth rate, total',
         legendTitle: 'Population Growth Rate (%)',
         projectedColumn: 'Population growth rate (%) (Projected)'
+    },
+    population: {
+        actualData: '../data/population-with-un-projections.csv',  // Your actual data for population growth
+        entityColumn: 'Entity',
+        codeColumn: 'Code',
+        yearColumn: 'Year',
+        actualColumn: 'Population, total',
+        legendTitle: 'Population',
+        projectedColumn: 'Population, medium projection (Projected)'
+    },
+    lifeExpectancy: {
+        actualData: '../data/life-expectancy.csv',  // Your actual data for life expectancy
+        entityColumn: 'Entity',
+        codeColumn: 'Code',
+        yearColumn: 'Year',
+        actualColumn: 'Life expectancy',
+        legendTitle: 'Life Expectancy',
+        projectedColumn: 'N/A'
     },
     // Add more options as needed
 };

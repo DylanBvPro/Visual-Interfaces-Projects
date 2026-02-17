@@ -32,10 +32,23 @@ class ChoroplethMap {
 
         this.initVis();
 
+        
+
     }
+
+    formatNumber(value) {
+    if (!isFinite(value)) return 'N/A';
+    const absVal = Math.abs(value);
+    if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+    if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+    if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    return value.toString();
+}
+
 
     initVis() {
         let vis = this;
+        
 
         const parentEl = document.querySelector(vis.config.parentElement);
         vis.config.containerWidth = parentEl.clientWidth || vis.config.containerWidth;
@@ -311,9 +324,9 @@ class ChoroplethMap {
                     }
                 }
 
-                const valueLabel = (value != null)
-                    ? `<strong>${value}</strong>` + (isProjected ? ' (Projected)' : '')
-                    : 'No data available';
+const valueLabel = (value != null && isFinite(value))
+    ? `<strong>${vis.formatNumber(value)}</strong>` + (isProjected ? ' (Projected)' : '')
+    : 'No data available';
 
                 const entityLabel = d.properties.name || 'Unknown';
                 const yearLabel = vis.years?.[vis.currentYearIndex] || '';

@@ -62,11 +62,12 @@
     </style>
 
     <header>
+             <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
         <h2>My Portfolio</h2>
         <nav>
             <a href="../index.html">Home</a>
             <a href="#">Median Age</a>
-            <a href="../pages/population-growth-rates.html">Population Growth Rates</a>
             <a href="../pages/comparative.html">Comparative Analysis</a>
         </nav>
     </header>
@@ -84,13 +85,13 @@
         <div id="tooltip"
             style="position:absolute; display:none; background:#fff; border:1px solid #aaa; padding:10px; pointer-events:none;">
         </div>
+    <button onclick="showPopup()">Show Popup</button>
 
         <svg id="chart"></svg>
 
         <div class="source">
-            Source: Data from <a href="https/link">link.com</a>
+            Source: Data from <a href="https://ourworldindata.org/">Our World in Data</a>
         </div>
-
 
         <!-- D3 bundle -->
         <script src="../js/d3.v6.min.js"></script>
@@ -101,6 +102,8 @@
         <script src="../js/barchart.js"></script>
         <!-- Our JS code - INCLUDING the new files-->
         <script src="../js/comparative.js"></script>
+
+
     </div>
 
 </body>

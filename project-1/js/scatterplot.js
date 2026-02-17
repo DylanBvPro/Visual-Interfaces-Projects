@@ -31,6 +31,15 @@ class Scatterplot {
         this.initVis();
     }
 
+    formatNumber(value) {
+    if (!isFinite(value)) return 'N/A';
+    const absVal = Math.abs(value);
+    if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+    if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+    if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    return value.toString();
+}
+
     /**
      * We initialize scales/axes and append static elements, such as axis titles.
      */
@@ -58,7 +67,9 @@ class Scatterplot {
             .ticks(6)
             .tickSize(-vis.width - 10)
             .tickPadding(10)
-            .tickFormat(d3.format(".1f"));
+            .tickFormat(d3.format(".1f"))
+            .tickFormat(d => vis.formatNumber(d));
+
 
         // Define size of SVG drawing area
         vis.svg = d3.select(vis.config.parentElement)
@@ -227,6 +238,14 @@ class Scatterplot {
         // Tooltip for average points
         vis.chart.selectAll('.avg-point')
             .on('mouseover', (event, d) => {
+                        let avgYDisplay;
+        if (!isFinite(d.avgY)) {
+            avgYDisplay = 'N/A';
+        } else if (Math.abs(d.avgY) >= 1e3) {
+            avgYDisplay = vis.formatNumber(d.avgY); // Use K/M/B shorthand
+        } else {
+            avgYDisplay = d.avgY.toFixed(2);       // Keep small numbers precise
+        }
                 d3.select('#tooltip')
                     .style('display', 'block')
                     .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
@@ -244,7 +263,7 @@ class Scatterplot {
                         <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
                             <li>Year: <strong>${d.year}</strong></li>
                             <li>Average X (Year): <strong>${d.year}</strong></li>
-                            <li>Average Y (Value): <strong>${d.avgY.toFixed(2)}</strong></li>
+                    <li>Average Y (Value): <strong>${avgYDisplay}</strong></li>
                         </ul>
                     `);
             })
@@ -253,57 +272,70 @@ class Scatterplot {
             });
 
         // Tooltip for regular data points
-        circles
-            .on('mouseover', (event, d) => {
-                const totalRaw = d[vis.config.actualColumn];
-                const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? Number(totalRaw) : null;
-                const projectedRaw = d[vis.config.projectedColumn];
-                const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? Number(projectedRaw) : null;
+       // Tooltip for regular data points
+circles
+    .on('mouseover', (event, d) => {
+        const totalRaw = d[vis.config.actualColumn];
+        const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? Number(totalRaw) : null;
+        const projectedRaw = d[vis.config.projectedColumn];
+        const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? Number(projectedRaw) : null;
 
-                let valueLabel = '';
-                let valueNumber = NaN;
+        let valueLabel = '';
+        let valueNumber = null;
+        let isProjected = false;
 
-                if (isFinite(total)) {
-                    valueLabel = vis.config.actualColumn;
-                    valueNumber = total;
-                } else if (isFinite(projected)) {
-                    valueLabel = vis.config.projectedColumn;
-                    valueNumber = projected;
-                } else {
-                    valueLabel = vis.config.actualColumn;
-                    valueNumber = 'N/A';
-                }
+        if (isFinite(total)) {
+            valueLabel = vis.config.actualColumn;
+            valueNumber = total;
+        } else if (isFinite(projected)) {
+            valueLabel = vis.config.projectedColumn;
+            valueNumber = projected;
+            isProjected = true;
+        }
 
-                // ===== Get flag URL =====
-                const flagUrl = getFlagUrl(d.code || d.Code || d.entity || d.Entity);
+        // ===== Get flag URL =====
+        const flagUrl = getFlagUrl(d.code || d.Code || d.entity || d.Entity);
 
-                // ===== Tooltip Styling =====
-                d3.select('#tooltip')
-                    .style('display', 'block')
-                    .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
-                    .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
-                    .style('background-color', 'rgba(255,255,255,0.95)')
-                    .style('border', '1px solid #ccc')
-                    .style('border-radius', '8px')
-                    .style('padding', '10px 15px')
-                    .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
-                    .style('font-family', 'Arial, sans-serif')
-                    .style('font-size', '16px')
-                    .style('color', '#333')
-                    .html(`
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                            <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
-                            ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
-                        </div>
-                        <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
-                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-                            <li>${valueLabel}: <strong>${isFinite(valueNumber) ? valueNumber.toFixed(2) : valueNumber}</strong></li>
-                        </ul>
-                    `);
-            })
-            .on('mouseleave', () => {
-                d3.select('#tooltip').style('display', 'none');
-            });
+        // ===== Format the number if needed =====
+        let valueDisplay;
+        if (valueNumber === null || !isFinite(valueNumber)) {
+            valueDisplay = 'No data';
+        } else if (Math.abs(valueNumber) >= 1e3) {
+            valueDisplay = vis.formatNumber(valueNumber);  // Use K/M/B shorthand
+        } else {
+            valueDisplay = valueNumber.toFixed(2);  // Keep small numbers precise
+        }
+
+        const valueLabelHTML = `<strong>${valueDisplay}</strong>${isProjected ? ' (Projected)' : ''}`;
+
+        // ===== Tooltip Styling =====
+        d3.select('#tooltip')
+            .style('display', 'block')
+            .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
+            .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
+            .style('background-color', 'rgba(255,255,255,0.95)')
+            .style('border', '1px solid #ccc')
+            .style('border-radius', '8px')
+            .style('padding', '10px 15px')
+            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+            .style('font-family', 'Arial, sans-serif')
+            .style('font-size', '16px')
+            .style('color', '#333')
+            .html(`
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
+                    ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
+                </div>
+                <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
+                <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
+                    <li>${valueLabel}: ${valueLabelHTML}</li>
+                </ul>
+            `);
+    })
+    .on('mouseleave', () => {
+        d3.select('#tooltip').style('display', 'none');
+    });
+
 
         // Update the axes/gridlines
         vis.xAxisG
