@@ -34,20 +34,20 @@ class Barchart {
     }
 
     formatNumber(value) {
-    if (!isFinite(value)) return 'N/A';
-    const absVal = Math.abs(value);
-    if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
-    if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-    if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
-    return value.toString();
-}
+        if (!isFinite(value)) return 'N/A';
+        const absVal = Math.abs(value);
+        if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+        if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+        if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+        return value.toString();
+    }
 
 
     /**
      * Initialize scales/axes and append static elements
      */
     initVis() {
-        
+
         let vis = this;
 
         // Calculate inner chart size. Margin specifies the space around the actual chart.
@@ -103,10 +103,10 @@ class Barchart {
 
         vis.chart.append('text')
             .attr('class', 'axis-title')
-            .attr('transform', `rotate(-90)`)
-            .attr('x', -vis.height / 0.45)
-            .attr('y', -vis.config.margin.left + 12)
-            .style('text-anchor', 'middle')
+            .attr('x', vis.width - 50)
+            .attr('y', -20)
+            .attr('dy', '.71em')
+            .style('text-anchor', 'start')
             .text(vis.config.yAxisName);
 
         // Create year selector controls
@@ -119,12 +119,11 @@ class Barchart {
      */
     initYearControls() {
         let vis = this;
-    // ✅ REMOVE old controls first
-    const oldControls = document.getElementById('year-controls');
-    if (oldControls) oldControls.remove();
+        const oldControls = document.getElementById('year-controls');
+        if (oldControls) oldControls.remove();
 
-    vis.years = vis.getYears();
-    if (vis.years.length === 0) return;
+        vis.years = vis.getYears();
+        if (vis.years.length === 0) return;
 
         // Create container for controls
         const controlsDiv = document.createElement('div');
@@ -186,10 +185,11 @@ class Barchart {
             document.getElementById('year-display').textContent = year;
         }
         if (document.getElementById('scroll-play-btn')) {
-            document.getElementById('scroll-play-btn').value = index;
+            document.getElementById('year-slider').value = index;
         }
         vis.updateVis(null, year);
     }
+
 
     /**
      * Toggle play/pause animation
@@ -229,10 +229,10 @@ class Barchart {
 
         vis.xAxis = d3.axisBottom(vis.xScale);
         vis.yAxis = d3.axisLeft(vis.yScale)
-    .ticks(6)
-    .tickSize(-vis.width - 10)
-    .tickPadding(0)
-    .tickFormat(d => vis.formatNumber(d));  // ✅ add this
+            .ticks(6)
+            .tickSize(-vis.width - 10)
+            .tickPadding(0)
+            .tickFormat(d => vis.formatNumber(d));  // ✅ add this
 
 
         // Position axes
@@ -349,7 +349,7 @@ class Barchart {
                 displayValue = d.projected;
             }
 
-const valueDisplay = vis.formatNumber(displayValue);
+            const valueDisplay = vis.formatNumber(displayValue);
             const yearText = isFinite(d.year) ? d.year : 'Unknown';
 
             d3.select('#tooltip')
@@ -400,19 +400,19 @@ const valueDisplay = vis.formatNumber(displayValue);
                 return Math.abs(yPos - y0);
             })
             .attr('fill', d => vis.config.colorScale ? vis.config.colorScale(d.key) : '#999');
-const labels = vis.chart.selectAll('.label')
-    .data(grouped)
-    .join('text')
-    .attr('class', 'label')
-    .attr('x', d => vis.xScale(d.key) + vis.xScale.bandwidth() / 2)  // Center the label on the bar
-    .attr('y', d => vis.yScale(d.value) + 50)  // Position the label slightly above the top of the bar (adjust based on bar height)
-    .attr('text-anchor', 'middle')  // Center the text horizontally
-    .attr('fill', 'white')  // White text color for better contrast
-    .attr('font-size', '32px')  // Increase font size for better visibility
-    .attr('font-weight', 'bold')  // Make the text bold
-    .attr('stroke', 'black')  // Add a black stroke for contrast
-    .attr('stroke-width', '2px')  // Define stroke width
-    .text(d => d.key);  // Display the label (d.key or another property if needed)
+        const labels = vis.chart.selectAll('.label')
+            .data(grouped)
+            .join('text')
+            .attr('class', 'label')
+            .attr('x', d => vis.xScale(d.key) + vis.xScale.bandwidth() / 2)  // Center the label on the bar
+            .attr('y', d => vis.yScale(d.value) + 50)  // Position the label slightly above the top of the bar (adjust based on bar height)
+            .attr('text-anchor', 'middle')  // Center the text horizontally
+            .attr('fill', 'white')  // White text color for better contrast
+            .attr('font-size', '32px')  // Increase font size for better visibility
+            .attr('font-weight', 'bold')  // Make the text bold
+            .attr('stroke', 'black')  // Add a black stroke for contrast
+            .attr('stroke-width', '2px')  // Define stroke width
+            .text(d => d.key);  // Display the label (d.key or another property if needed)
 
         // Tooltip event listeners
         bars
@@ -428,7 +428,7 @@ const labels = vis.chart.selectAll('.label')
                     displayValue = d.projected;
                 }
 
-const valueDisplay = vis.formatNumber(displayValue);
+                const valueDisplay = vis.formatNumber(displayValue);
                 const yearText = isFinite(d.year) ? d.year : 'Unknown';
 
                 // ===== Flag =====
@@ -485,7 +485,7 @@ const valueDisplay = vis.formatNumber(displayValue);
             .call(g => g.select('.domain').remove());
     }
 
-    
+
 
 }
 

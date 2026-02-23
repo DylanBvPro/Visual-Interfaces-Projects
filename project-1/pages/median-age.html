@@ -59,7 +59,7 @@
             margin-bottom: clamp(0rem, 0vw, 0rem);
         }
 
-         /* Styling for the dropdown */
+        /* Styling for the dropdown */
         #variable-dropdown {
             margin: 10px;
             padding: 10px 20px;
@@ -93,12 +93,14 @@
         /* Adjust for responsiveness */
         @media (max-width: 768px) {
             #dropdown-container {
-                justify-content: center; /* Center on smaller screens */
+                justify-content: center;
+                /* Center on smaller screens */
                 margin-top: 10px;
             }
 
             #variable-dropdown {
-                width: 100%; /* Full width on smaller screens */
+                width: 100%;
+                /* Full width on smaller screens */
                 max-width: 250px;
             }
         }
@@ -118,22 +120,26 @@
     <!-- Country selector (search + checkboxes) -->
     <div id="page-content">
 
-    <div id="dropdown-container">
-        <label for="variable-dropdown" style="font-weight: bold; display: flex; align-items: center; justify-content: center;">Select Data Variable:</label>
-        <select id="variable-dropdown">
-            <option value="medianAge">Median Age</option>
-            <option value="populationGrowth">Population Growth Rate</option>
-            <option value="population">Population</option>
-            <option value="lifeExpectancy">Life Expectancy</option>
+        <div id="dropdown-container">
+            <label for="variable-dropdown"
+                style="font-weight: bold; display: flex; align-items: center; justify-content: center;">Select Data
+                Variable:</label>
+            <select id="variable-dropdown">
+                <option value="medianAge">Median Age</option>
+                <option value="populationGrowth">Population Growth Rate</option>
+                <option value="population">Population</option>
+                <option value="lifeExpectancy">Life Expectancy</option>
 
-            <!-- Add more options as needed -->
-        </select>
-    </div>
+                <!-- Add more options as needed -->
+            </select>
+        </div>
 
         <div id="chart-container" style="display: flex; gap: 20px; width: 100%; overflow: auto;">
             <svg id="scatterplot" style="flex: 1; overflow: auto;"></svg>
             <div id="country-filters"></div>
         </div>
+        <hr class="modern-divider" style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+
         <div id="chart-container"><svg id="barchart"></svg></div>
 
         <div id="tooltip"
@@ -161,25 +167,25 @@
         <script src="../js/main.js"></script>
     </div>
 
-                <script>
-function showPopup() {
-    Swal.fire({
-        title: 'Welcome!',
-        text: 'Feel free to explore the data visualizations. If you want to compare the world data against a single coutntry, select the country from the dropdown menu on the right. Life expectancy data more limited then the rest and might not be available for all countries and doesn\'t have any predictive data.',
-        icon: 'info',
-        confirmButtonText: 'Cool',
-        customClass: {
-            popup: 'custom-popup',         // Apply your CSS to the popup container
-            title: 'custom-popup-title',   // Optional: style title
-            content: 'custom-popup-text',  // Optional: style text
-            confirmButton: 'custom-popup-button' // Style the button
-        },
-        buttonsStyling: false // Disable default SweetAlert2 button styles
-    });
-}
+    <script>
+        function showPopup() {
+            Swal.fire({
+                title: 'Welcome!',
+                text: 'Feel free to explore the data visualizations. If you want to compare the world data against a single coutntry, select the country from the dropdown menu on the right and select world. Life expectancy data more limited then the rest and might not be available for all countries and doesn\'t have any predictive data.',
+                icon: 'info',
+                confirmButtonText: 'Cool',
+                customClass: {
+                    popup: 'custom-popup',         // Apply your CSS to the popup container
+                    title: 'custom-popup-title',   // Optional: style title
+                    content: 'custom-popup-text',  // Optional: style text
+                    confirmButton: 'custom-popup-button' // Style the button
+                },
+                buttonsStyling: false // Disable default SweetAlert2 button styles
+            });
+        }
 
 
-                window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', () => {
             showPopup();
         });
     </script>

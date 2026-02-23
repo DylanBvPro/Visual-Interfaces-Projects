@@ -150,11 +150,18 @@ if (geoData && choroplethMap) {
             return out;
         }
 
-        colorScale = d3.scaleOrdinal()
-            .domain(codes)
-            .range(generatePalette(codes.length));
+const continuous = d3.scaleLinear()
+  .domain([0, 0.33, 0.66, 1])
+  .range(['#cfe2f2', '#7accc8', '#f2b880', '#0d306b'])
+  .interpolate(d3.interpolateHcl);
 
-        colorByCode = Object.fromEntries(codes.map(c => [c, colorScale(c)]));
+const palette = codes.map((_, i) => continuous(i / (codes.length - 1)));
+
+const colorScale = d3.scaleOrdinal()
+  .domain(codes)
+  .range(palette);
+  
+  colorByCode = Object.fromEntries(codes.map(c => [c, colorScale(c)]));
 
         // Split data for Barchart: actual vs projected
         const actualData = data.filter(d => !isNaN(d[selectedData.actualColumn]));
