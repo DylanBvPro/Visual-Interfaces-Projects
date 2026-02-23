@@ -29,6 +29,8 @@ class ChoroplethMap {
         this.currentYearIndex = 0;
         this.isPlaying = false;
         this.animationInterval = null;
+        this.hoveredFeature = null;
+        this.lastMouseEvent = null;
 
         this.initVis();
 
@@ -264,6 +266,12 @@ class ChoroplethMap {
         vis.currentYearIndex = index % vis.years.length;
         if (document.getElementById('year-display2')) document.getElementById('year-display2').textContent = vis.years[vis.currentYearIndex];
         if (document.getElementById('scroll-play-btn2')) document.getElementById('year-slider2').value = vis.currentYearIndex;
+        
+        // Update tooltip if hovering over a country
+        if (vis.hoveredFeature && vis.lastMouseEvent) {
+            vis.updateTooltip(vis.lastMouseEvent, vis.hoveredFeature);
+        }
+        
         vis.updateVis();
     }
 
@@ -281,6 +289,60 @@ class ChoroplethMap {
         } else {
             clearInterval(vis.animationInterval);
         }
+    }
+
+    updateTooltip(event, d) {
+        let vis = this;
+        const prop = d.properties[vis.config.valueProperty];
+
+        // Get value for current year: prefer actual, fallback to projected
+        let value = null;
+        let isProjected = false;
+
+        if (prop) {
+            const yearData = vis.years?.length > 0 ? prop[vis.years[vis.currentYearIndex]] : prop;
+            if (yearData) {
+                if (yearData[vis.config.valueKey] != null) {
+                    value = +yearData[vis.config.valueKey]; // actual value
+                } else if (yearData.projected != null) {
+                    value = +yearData.projected;           // fallback to projected
+                    isProjected = true;
+                }
+            }
+        }
+
+        const valueLabel = (value != null && isFinite(value))
+            ? `<strong>${vis.formatNumber(value)}</strong>` + (isProjected ? ' (Projected)' : '')
+            : 'No data available';
+
+        const entityLabel = d.properties.name || 'Unknown';
+        const yearLabel = vis.years?.[vis.currentYearIndex] || '';
+
+        // Optional: resolve ISO3 code from common feature fields and get flag URL
+        const iso3 = d.id || d.properties.ISO_A3 || d.properties.iso_a3 || d.properties.ISO3 || d.properties.iso3 || d.properties.Code || d.properties.code;
+        const flagUrl = getFlagUrl(iso3);
+        d3.select('#tooltip')
+            .style('display', 'block')
+            .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
+            .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
+            .style('background-color', 'rgba(255,255,255,0.95)')
+            .style('border', '1px solid #ccc')
+            .style('border-radius', '8px')
+            .style('padding', '10px 15px')
+            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+            .style('font-family', 'Arial, sans-serif')
+            .style('font-size', '16px')
+            .style('color', '#333')
+            .html(`
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span style="font-weight: bold; font-size: 18px;">${entityLabel}</span>
+          ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
+        </div>
+        <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${yearLabel}</i></div>
+        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
+          <li>${vis.config.legendTitle}: ${valueLabel}</li>
+        </ul>
+      `);
     }
 
     renderVis() {
@@ -306,58 +368,13 @@ class ChoroplethMap {
 
         countryPath
             .on('mousemove', (event, d) => {
-                const prop = d.properties[vis.config.valueProperty];
-
-                // Get value for current year: prefer actual, fallback to projected
-                let value = null;
-                let isProjected = false;
-
-                if (prop) {
-                    const yearData = vis.years?.length > 0 ? prop[vis.years[vis.currentYearIndex]] : prop;
-                    if (yearData) {
-                        if (yearData[vis.config.valueKey] != null) {
-                            value = +yearData[vis.config.valueKey]; // actual value
-                        } else if (yearData.projected != null) {
-                            value = +yearData.projected;           // fallback to projected
-                            isProjected = true;
-                        }
-                    }
-                }
-
-const valueLabel = (value != null && isFinite(value))
-    ? `<strong>${vis.formatNumber(value)}</strong>` + (isProjected ? ' (Projected)' : '')
-    : 'No data available';
-
-                const entityLabel = d.properties.name || 'Unknown';
-                const yearLabel = vis.years?.[vis.currentYearIndex] || '';
-
-                // Optional: resolve ISO3 code from common feature fields and get flag URL
-                const iso3 = d.id || d.properties.ISO_A3 || d.properties.iso_a3 || d.properties.ISO3 || d.properties.iso3 || d.properties.Code || d.properties.code;
-                const flagUrl = getFlagUrl(iso3);
-                d3.select('#tooltip')
-                    .style('display', 'block')
-                    .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
-                    .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
-                    .style('background-color', 'rgba(255,255,255,0.95)')
-                    .style('border', '1px solid #ccc')
-                    .style('border-radius', '8px')
-                    .style('padding', '10px 15px')
-                    .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
-                    .style('font-family', 'Arial, sans-serif')
-                    .style('font-size', '16px')
-                    .style('color', '#333')
-                    .html(`
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-          <span style="font-weight: bold; font-size: 18px;">${entityLabel}</span>
-          ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
-        </div>
-        <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${yearLabel}</i></div>
-        <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-          <li>${vis.config.legendTitle}: ${valueLabel}</li>
-        </ul>
-      `);
+                vis.hoveredFeature = d;
+                vis.lastMouseEvent = event;
+                vis.updateTooltip(event, d);
             })
             .on('mouseleave', () => {
+                vis.hoveredFeature = null;
+                vis.lastMouseEvent = null;
                 d3.select('#tooltip').style('display', 'none');
             });
 
