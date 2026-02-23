@@ -15,6 +15,8 @@ const dataVisualizationOptions = [
     { value: "bellcurveScatterplot", label: "T-Score (Median-Centered)" }
 ];
 
+let hasShownVisualizationWarning = false;
+
 function createDropdown(id, labelText, options, defaultValue) {
     const container = document.createElement("div");
     container.className = "variable-container";
@@ -48,7 +50,25 @@ function createDropdown(id, labelText, options, defaultValue) {
         select.appendChild(option);
     });
 
-    select.addEventListener("change", emitCompareSettings);
+    select.addEventListener("change", () => {
+        if (id === "dataVisualizationSelect" && !hasShownVisualizationWarning && typeof Swal !== 'undefined') {
+            hasShownVisualizationWarning = true;
+            Swal.fire({
+                title: 'Visualization Changed/A.I. ',
+                text: 'This feature is experimental and may produce unexpected results. This is due to the mostly A.I.-generated code for the new visualizations, which may not be fully optimized or bug-free.',
+                icon: 'warning',
+                confirmButtonText: 'Got it',
+                customClass: {
+                    popup: 'custom-popup',
+                    title: 'custom-popup-title',
+                    content: 'custom-popup-text',
+                    confirmButton: 'custom-popup-button'
+                },
+                buttonsStyling: false
+            });
+        }
+        emitCompareSettings();
+    });
 
     container.appendChild(label);
     container.appendChild(select);

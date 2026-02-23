@@ -44,7 +44,7 @@ class Scatterplot {
         const absVal = Math.abs(value);
         if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
         if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-        if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+        if (absVal >= 2101) return (value / 1e3).toFixed(1) + 'K';
         if (absVal >= 1) return value.toFixed(1);
         if (absVal >= 0.01) return value.toFixed(2);
         return value.toPrecision(2);
@@ -110,7 +110,8 @@ class Scatterplot {
 
         // Filter data by year if in comparative mode with year filter
         let workingData = vis.data;
-        if (vis.config.isComparative && vis.config.yearFilter) {
+        const isXYearAxis = vis.config.xActualColumn === 'Year' || vis.config.xActualColumn === vis.config.yearColumn;
+        if (vis.config.isComparative && vis.config.yearFilter && !isXYearAxis) {
             const targetYear = Number(vis.config.yearFilter);
             if (Number.isFinite(targetYear)) {
                 workingData = vis.data.filter(d => d[vis.config.yearColumn] === targetYear);
@@ -321,6 +322,7 @@ class Scatterplot {
         vis.chart.selectAll('.distribution-area').remove();
         vis.chart.selectAll('.sigma-band').remove();
         vis.chart.selectAll('.sigma-label').remove();
+        vis.chart.selectAll('.brush-layer').remove();
 
         // Use passed workingData or fall back to vis.data
         const maxPoints = 100000;
@@ -359,6 +361,14 @@ class Scatterplot {
                 const key = vis.colorValue(d);
                 return vis.config.colorScale ? vis.config.colorScale(key) : '#999';
             });
+
+        if (window.enableScatterplotBrush) {
+            window.enableScatterplotBrush(vis, circles, {
+                getX: d => vis.xScale(vis.xValue(d)),
+                getY: d => vis.yScale(vis.yValue(d)),
+                keyFn: d => d.code || d.Code
+            });
+        }
 
         // Add average points for each year
         vis.chart.selectAll('.avg-point')
@@ -681,6 +691,7 @@ class Scatterplot {
         vis.chart.selectAll('.distribution-area').remove();
         vis.chart.selectAll('.sigma-band').remove();
         vis.chart.selectAll('.sigma-label').remove();
+        vis.chart.selectAll('.brush-layer').remove();
         
         const dataToRender = workingData || vis.data;
         const validData = dataToRender.filter(d => !isNaN(vis.xValue(d)) && !isNaN(vis.yValue(d)));
@@ -797,6 +808,7 @@ class Scatterplot {
         vis.chart.selectAll('.distribution-area').remove();
         vis.chart.selectAll('.sigma-band').remove();
         vis.chart.selectAll('.sigma-label').remove();
+        vis.chart.selectAll('.brush-layer').remove();
         
         const dataToRender = workingData || vis.data;
         const validData = dataToRender.filter(d => !isNaN(vis.xValue(d)) && !isNaN(vis.yValue(d)));
@@ -1045,6 +1057,14 @@ class Scatterplot {
                 const key = vis.colorValue(d);
                 return vis.config.colorScale ? vis.config.colorScale(key) : '#999';
             });
+
+        if (window.enableScatterplotBrush) {
+            window.enableScatterplotBrush(vis, circles, {
+                getX: d => xToPixel(vis.xValue(d)),
+                getY: d => yToPixel(vis.yValue(d)),
+                keyFn: d => d.code || d.Code
+            });
+        }
         
         // Add tooltips with keyboard navigation
         let currentNearbyCircles = [];

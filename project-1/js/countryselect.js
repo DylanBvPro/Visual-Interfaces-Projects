@@ -138,10 +138,26 @@
     }
   }
 
+  /**
+   * Programmatically set selected countries and refresh UI
+   * @param {Array} selectedCodes
+   * @param {Boolean} notify
+   */
+  function setSelectedCountries(selectedCodes = [], notify = true) {
+    selectedCountries = new Set(selectedCodes.filter(Boolean));
+    if (currentRenderCheckboxes) {
+      currentRenderCheckboxes();
+    }
+    if (notify && currentOnSelectionChange) {
+      currentOnSelectionChange(Array.from(selectedCountries));
+    }
+  }
+
   // Expose globally
   window.CountrySelector = {
     init: initCountrySelector,
     clearAll: clearAllSelections,
-    selectAll: selectAllCountries
+    selectAll: selectAllCountries,
+    setSelected: setSelectedCountries
   };
 })();
