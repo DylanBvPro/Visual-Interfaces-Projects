@@ -67,8 +67,8 @@
         <h2>My Portfolio</h2>
         <nav>
             <a href="../index.html">Home</a>
-            <a href="#">Median Age</a>
-            <a href="../pages/comparative.html">Comparative Analysis</a>
+            <a href="../pages/single-data.html">Single Static Charts</a>
+            <a href="../pages/comparative-data.html">Comparative Analysis</a>
         </nav>
     </header>
 
@@ -81,12 +81,14 @@
             <svg id="scatterplot" style="flex: 1; overflow: auto;"></svg>
             <div id="country-filters"></div>
         </div>
+
+        <hr class="modern-divider" style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+
         <div id="chart-container"><svg id="barchart" ></svg></div>
 
         <div id="tooltip"
             style="position:absolute; display:none; background:#fff; border:1px solid #aaa; padding:10px; pointer-events:none;">
         </div>
-    <button onclick="showPopup()">Show Popup</button>
 
         <svg id="chart"></svg>
 
@@ -103,9 +105,32 @@
         <script src="../js/scatterplot.js"></script>
         <script src="../js/barchart.js"></script>
         <!-- Our JS code - INCLUDING the new files-->
-     <script src ="../js/populationGrowthRate.js"></script>
+     <script src ="../js/comparative-data-main.js"></script>
 
     </div>
+
+        <script>
+        function showPopup() {
+            Swal.fire({
+                title: 'Welcome!',
+                text: 'This is a comparative analysis of global data. Explore the charts and use the filters to customize your view. Zoom in or refine your data set if its too cluttered. Enjoy exploring the trends and insights!',
+                icon: 'info',
+                confirmButtonText: 'Cool',
+                customClass: {
+                    popup: 'custom-popup',         // Apply your CSS to the popup container
+                    title: 'custom-popup-title',   // Optional: style title
+                    content: 'custom-popup-text',  // Optional: style text
+                    confirmButton: 'custom-popup-button' // Style the button
+                },
+                buttonsStyling: false // Disable default SweetAlert2 button styles
+            });
+        }
+
+
+        window.addEventListener('DOMContentLoaded', () => {
+            showPopup();
+        });
+    </script>
 
 </body>
 

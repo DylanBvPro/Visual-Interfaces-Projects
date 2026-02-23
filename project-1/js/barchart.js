@@ -77,7 +77,7 @@ class Barchart {
         // Define size of SVG drawing area
         vis.svg = d3.select(vis.config.parentElement)
             .attr('width', vis.config.containerWidth)
-            .attr('height', 300);
+            .attr('height', 600);
 
         // Append group element that will contain our actual chart 
         // and position it according to the given margin config

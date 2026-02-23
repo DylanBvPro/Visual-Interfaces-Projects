@@ -119,9 +119,29 @@
     }
   }
 
+  /**
+   * Select all countries except World
+   */
+  function selectAllCountries() {
+    selectedCountries.clear();
+    allCountries.forEach(country => {
+      // Exclude "World" or any entity containing "World"
+      if (country.Entity.toLowerCase() !== 'world' && !country.Entity.toLowerCase().includes('world')) {
+        selectedCountries.add(country.Code);
+      }
+    });
+    if (currentRenderCheckboxes) {
+      currentRenderCheckboxes();
+    }
+    if (currentOnSelectionChange) {
+      currentOnSelectionChange(Array.from(selectedCountries));
+    }
+  }
+
   // Expose globally
   window.CountrySelector = {
     init: initCountrySelector,
-    clearAll: clearAllSelections
+    clearAll: clearAllSelections,
+    selectAll: selectAllCountries
   };
 })();

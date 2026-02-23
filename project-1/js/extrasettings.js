@@ -9,7 +9,13 @@ const axisOptions = [
     { value: "lifeExpectancy", label: "Life Expectancy" }
 ];
 
-function createDropdown(id, labelText, options) {
+const dataVisualizationOptions = [
+    { value: "scatterplot", label: "Scatter Plot" },
+    { value: "heatmap", label: "Heatmap" },
+    { value: "bellcurveScatterplot", label: "T-Score (Median-Centered)" }
+];
+
+function createDropdown(id, labelText, options, defaultValue) {
     const container = document.createElement("div");
     container.className = "variable-container";
 
@@ -28,9 +34,15 @@ function createDropdown(id, labelText, options) {
         if (typeof optionValue === "object") {
             option.value = optionValue.value;
             option.textContent = optionValue.label;
+            if (defaultValue && optionValue.value === defaultValue) {
+                option.selected = true;
+            }
         } else {
             option.value = optionValue;
             option.textContent = optionValue;
+            if (defaultValue && optionValue === defaultValue) {
+                option.selected = true;
+            }
         }
 
         select.appendChild(option);
@@ -50,12 +62,13 @@ function emitCompareSettings() {
     const yOption = document.getElementById("ySelect")?.value || "growthRate";
     const yearInput = document.getElementById("yearFilter");
     const yearFilter = yearInput?.value ? Number(yearInput.value) : null;
+    const dataVisualization = document.getElementById("dataVisualizationSelect")?.value || "scatterplot";
 
     const xMode = xOption;
     const yMode = yOption;
 
     window.dispatchEvent(new CustomEvent("compareSettingsChanged", {
-        detail: { xMode, yMode, rOption, xOption, yOption, yearFilter }
+        detail: { xMode, yMode, rOption, xOption, yOption, yearFilter, dataVisualization }
     }));
 
     updateYearFieldState();
@@ -86,7 +99,8 @@ function updateYearFieldState() {
                         rOption: document.getElementById("rSelect")?.value,
                         xOption: xOption,
                         yOption: yOption,
-                        yearFilter: 2020
+                        yearFilter: 2020,
+                        dataVisualization: document.getElementById("dataVisualizationSelect")?.value || "scatterplot"
                     }
                 }));
             }, 0);
@@ -99,10 +113,10 @@ document.addEventListener("DOMContentLoaded", () => {
     wrapper.className = "variable-wrapper";
     wrapper.id = "compare-settings";
 
-    wrapper.appendChild(createDropdown("rSelect", "R", rOptions));
-    wrapper.appendChild(createDropdown("xSelect", "X", axisOptions));
-    wrapper.appendChild(createDropdown("ySelect", "Y", axisOptions));
-
+    wrapper.appendChild(createDropdown("rSelect", "R", rOptions, "Growth Rate"));
+    wrapper.appendChild(createDropdown("xSelect", "X", axisOptions, "year"));
+    wrapper.appendChild(createDropdown("ySelect", "Y", axisOptions, "lifeExpectancy"));
+    wrapper.appendChild(createDropdown("dataVisualizationSelect", "Data Visualization", dataVisualizationOptions, "scatterplot"));
     const yearContainer = document.createElement("div");
     yearContainer.className = "variable-container";
     yearContainer.id = "yearFilterContainer";
@@ -124,6 +138,15 @@ document.addEventListener("DOMContentLoaded", () => {
     yearContainer.appendChild(yearLabel);
     yearContainer.appendChild(yearInput);
     wrapper.appendChild(yearContainer);
+
+    // Select All button
+    const selectAllButton = document.createElement("button");
+    selectAllButton.textContent = "Select All";
+    selectAllButton.className = "select-all-button";
+    selectAllButton.addEventListener("click", () => {
+        window.dispatchEvent(new CustomEvent("selectAllCountries"));
+    });
+    wrapper.appendChild(selectAllButton);
 
     // Clear All button
     const clearAllButton = document.createElement("button");
