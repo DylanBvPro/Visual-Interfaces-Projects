@@ -155,6 +155,18 @@
             Source: Data from <a href="https://ourworldindata.org/">Our World in Data</a>
         </div>
 
+        <hr class="modern-divider" style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+        <section id="linked-highlight-charts" style="margin-top: 24px;">
+            <div id="linked-year-controls-host"></div>
+            <div style="display: flex; gap: 20px; width: 100%; align-items: stretch;">
+                <svg id="linked-scatterplot" style="flex: 1; min-height: 420px; min-width: 420px;"></svg>
+                <svg id="linked-barchart" style="flex: 1; min-height: 430px; min-width: 420px;"></svg>
+            </div>
+            <div style="margin-top: 40px;">
+                <div id="linked-choropleth-map" style="width: 100%; height: 600px;"></div>
+            </div>
+        </section>
+
         <!-- D3 bundle -->
         <script src="../js/d3.v6.min.js"></script>
         <script src="../js/countryselect.js"></script>
@@ -167,6 +179,7 @@
         <script src="../js/choroplethMap.js"></script>
         <script src="../js/topojson.v3.js"></script>
         <script src="../js/single-data-main.js"></script>
+        <script src="../js/linked-highlight-charts.js"></script>
     </div>
 
     <script>
@@ -189,6 +202,87 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             showPopup();
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const dataOptions = {
+                medianAge: {
+                    csvPath: '../data/median-age.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Median age, total',
+                    projectedColumn: 'Median age (Projected)'
+                },
+                populationGrowth: {
+                    csvPath: '../data/population-growth-rates.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Growth rate, total',
+                    projectedColumn: 'Population growth rate (%) (Projected)'
+                },
+                population: {
+                    csvPath: '../data/population-with-un-projections.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Population, total',
+                    projectedColumn: 'Population, medium projection (Projected)'
+                },
+                lifeExpectancy: {
+                    csvPath: '../data/life-expectancy.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Life expectancy',
+                    projectedColumn: ''
+                }
+            };
+
+            let linkedChartsController = null;
+
+            async function mountLinkedCharts(optionKey) {
+                const option = dataOptions[optionKey] || dataOptions.medianAge;
+                if (!window.HighlightedCountryCharts || !option) return;
+
+                if (linkedChartsController && typeof linkedChartsController.destroy === 'function') {
+                    linkedChartsController.destroy();
+                    linkedChartsController = null;
+                }
+
+                linkedChartsController = await window.HighlightedCountryCharts.init({
+                    csvPath: option.csvPath,
+                    scatterplotSelector: '#linked-scatterplot',
+                    barchartSelector: '#linked-barchart',
+                    choroplethSelector: '#linked-choropleth-map',
+                    geoDataPath: '../data/worldgeo.json',
+                    yearControlsHostSelector: '#linked-year-controls-host',
+                    yearInputSelector: '#linked-year-input-bottom',
+                    yearLabelSelector: '#linked-year-label-bottom',
+                    countryFilterSelector: '#country-filters',
+                    entityColumn: option.entityColumn,
+                    codeColumn: option.codeColumn,
+                    yearColumn: option.yearColumn,
+                    actualColumn: option.actualColumn,
+                    projectedColumn: option.projectedColumn,
+                    useExistingCountrySelector: true,
+                    defaultSelectedCodes: ['USA', 'CHN', 'IND']
+                });
+            }
+
+            const dropdown = document.getElementById('variable-dropdown');
+            const initialKey = dropdown ? dropdown.value : 'medianAge';
+
+            setTimeout(() => {
+                mountLinkedCharts(initialKey).catch(console.error);
+            }, 250);
+
+            if (dropdown) {
+                dropdown.addEventListener('change', (event) => {
+                    mountLinkedCharts(event.target.value).catch(console.error);
+                });
+            }
         });
     </script>
 

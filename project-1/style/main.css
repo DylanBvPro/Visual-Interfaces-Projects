@@ -367,7 +367,8 @@
 .variable-output {
   font-size: 14px;
   font-weight: 600;
-  color: #4b4b4e;
+    margin-top: 20px;
+    padding: 8px 16px;
 }
 
 /* Responsive behavior */

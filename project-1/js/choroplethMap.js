@@ -20,7 +20,8 @@ class ChoroplethMap {
             legendBottom: 50,
             legendLeft: 50,
             legendRectHeight: 12,
-            legendRectWidth: 150
+            legendRectWidth: 150,
+            hideYearControls: _config.hideYearControls || false
         }
     this.instanceId = `map-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -216,7 +217,9 @@ class ChoroplethMap {
         if (!Array.isArray(years) || years.length === 0) return;
         vis.years = years.slice();
         vis.currentYearIndex = 0;
-        vis.initYearControls();
+        if (!vis.config.hideYearControls) {
+            vis.initYearControls();
+        }
         vis.updateVis();
     }
 
@@ -298,10 +301,12 @@ class ChoroplethMap {
         // Get value for current year: prefer actual, fallback to projected
         let value = null;
         let isProjected = false;
+        let isSelected = false;
 
         if (prop) {
             const yearData = vis.years?.length > 0 ? prop[vis.years[vis.currentYearIndex]] : prop;
             if (yearData) {
+                isSelected = true;
                 if (yearData[vis.config.valueKey] != null) {
                     value = +yearData[vis.config.valueKey]; // actual value
                 } else if (yearData.projected != null) {
@@ -311,9 +316,11 @@ class ChoroplethMap {
             }
         }
 
-        const valueLabel = (value != null && isFinite(value))
-            ? `<strong>${vis.formatNumber(value)}</strong>` + (isProjected ? ' (Projected)' : '')
-            : 'No data available';
+        const valueLabel = isSelected 
+            ? ((value != null && isFinite(value))
+                ? `<strong>${vis.formatNumber(value)}</strong>` + (isProjected ? ' (Projected)' : '')
+                : 'No data available')
+            : '<em>Not selected</em>';
 
         const entityLabel = d.properties.name || 'Unknown';
         const yearLabel = vis.years?.[vis.currentYearIndex] || '';
@@ -362,8 +369,10 @@ class ChoroplethMap {
             .attr('d', vis.geoPath)
             .attr('fill', d => {
                 const v = vis.getValueForFeature(d);
-                return (v || v === 0) ? vis.colorScale(v) : '#ccc'; // fallback color if no data
-            });
+                return (v || v === 0) ? vis.colorScale(v) : '#f5f5f5'; // light gray for countries without data
+            })
+            .attr('stroke', '#999') // Add stroke/outline to all countries
+            .attr('stroke-width', 0.5);
 
 
         countryPath
@@ -411,4 +420,9 @@ function getFlagUrl(countryCode) {
     return iso2
         ? `https://flagcdn.com/64x48/${iso2.toLowerCase()}.png`
         : '';
+}
+
+// Explicitly expose the class to the window object
+if (typeof window !== 'undefined') {
+  window.ChoroplethMap = ChoroplethMap;
 }

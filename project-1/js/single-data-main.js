@@ -79,43 +79,55 @@ function loadData(selectedOption) {
 
     d3.csv(selectedData.actualData).then(_data => {
         data = _data;
-if (geoData && choroplethMap) {
-    // Build a list of years present in the CSV
-    const years = Array.from(new Set(data.map(d => +d[selectedData.yearColumn]).filter(y => !isNaN(y)))).sort((a,b) => a - b);
+        
+        // Clear and reinitialize the map when dropdown changes
+        if (geoData && choroplethMap) {
+            // Clear the SVG container
+            d3.select('#map').selectAll('*').remove();
+            
+            // Create new choroplethMap instance
+            choroplethMap = new ChoroplethMap({
+                parentElement: '#map'
+            }, geoData);
+        }
+        
+        if (geoData && choroplethMap) {
+            // Build a list of years present in the CSV
+            const years = Array.from(new Set(data.map(d => +d[selectedData.yearColumn]).filter(y => !isNaN(y)))).sort((a,b) => a - b);
 
-    // For each GeoJSON feature, attach a map of year -> { actual, projected, entity }
-    geoData.features.forEach(feature => {
-        feature.properties.data = feature.properties.data || {};
-        const rows = data.filter(d => (d.Code || d.code || '') === feature.id);
-        rows.forEach(row => {
-            const y = +row[selectedData.yearColumn];
-            if (isNaN(y)) return;
-            const actualRaw = row[selectedData.actualColumn]?.trim();
-            const projectedRaw = row[selectedData.projectedColumn]?.trim();
-            const actual = actualRaw ? +actualRaw : NaN;
-            const projected = projectedRaw ? +projectedRaw : NaN;
-            feature.properties.data[y] = {
-                actual: Number.isFinite(actual) ? actual : null,
-                projected: Number.isFinite(projected) ? projected : null,
-                entity: row[selectedData.entityColumn] || row.Entity || feature.properties.name,
-                code: row[selectedData.codeColumn] || row.Code || feature.id
-            };
-        });
-    });
+            // For each GeoJSON feature, attach a map of year -> { actual, projected, entity }
+            geoData.features.forEach(feature => {
+                feature.properties.data = feature.properties.data || {};
+                const rows = data.filter(d => (d.Code || d.code || '') === feature.id);
+                rows.forEach(row => {
+                    const y = +row[selectedData.yearColumn];
+                    if (isNaN(y)) return;
+                    const actualRaw = row[selectedData.actualColumn]?.trim();
+                    const projectedRaw = row[selectedData.projectedColumn]?.trim();
+                    const actual = actualRaw ? +actualRaw : NaN;
+                    const projected = projectedRaw ? +projectedRaw : NaN;
+                    feature.properties.data[y] = {
+                        actual: Number.isFinite(actual) ? actual : null,
+                        projected: Number.isFinite(projected) ? projected : null,
+                        entity: row[selectedData.entityColumn] || row.Entity || feature.properties.name,
+                        code: row[selectedData.codeColumn] || row.Code || feature.id
+                    };
+                });
+            });
 
-    // Configure the choropleth to use the `data` property and legend title
-    choroplethMap.config.valueProperty = 'data';
-    choroplethMap.config.valueKey = 'actual';
-    choroplethMap.config.legendTitle = selectedData.legendTitle || 'Value';
+            // Configure the choropleth to use the `data` property and legend title
+            choroplethMap.config.valueProperty = 'data';
+            choroplethMap.config.valueKey = 'actual';
+            choroplethMap.config.legendTitle = selectedData.legendTitle || 'Value';
 
-    // Provide years to the map and show the first year
-    if (years.length > 0) {
-        choroplethMap.setYears(years);
-        choroplethMap.updateYear(0);
-    } else {
-        choroplethMap.updateVis();
-    }
-}
+            // Provide years to the map and show the first year
+            if (years.length > 0) {
+                choroplethMap.setYears(years);
+                choroplethMap.updateYear(0);
+            } else {
+                choroplethMap.updateVis();
+            }
+        }
 
 
         // Cast numeric values - be careful with empty strings
