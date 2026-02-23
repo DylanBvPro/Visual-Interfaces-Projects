@@ -1,4 +1,4 @@
-console.log("ran populationGrowthRate.js");
+console.log("ran comparative-data-main.js");
 
 // Global objects
 let data, scatterplot, barchart;
@@ -13,7 +13,8 @@ const currentSettings = {
   xOption: 'year',
   yOption: 'growthRate',
   radius: 4,
-  yearFilter: null
+  yearFilter: null,
+  dataVisualization: 'scatterplot'
 };
 
 const dataOption = {
@@ -272,7 +273,8 @@ function rebuildCharts() {
     yearFilter: currentSettings.yearFilter,
     rActualColumn: rMeta.actualColumn,
     rProjectedColumn: rMeta.projectedColumn,
-    rAxisName: rMeta.yAxisName
+    rAxisName: rMeta.yAxisName,
+    dataVisualization: currentSettings.dataVisualization
   }, actualData, predictedData);
 
   scatterplot.updateVis(0);
@@ -305,7 +307,7 @@ function filterData(selectedCodes) {
   }
 
   const countryFiltered = (!selectedCodes || selectedCodes.length === 0)
-    ? mergedData
+    ? [] 
     : mergedData.filter(d => selectedCodes.includes(d.Code || d.code || ''));
 
   const metricFiltered = countryFiltered.filter(d => {
@@ -342,13 +344,15 @@ window.addEventListener('compareSettingsChanged', (event) => {
   const yChanged = settings.yOption && settings.yOption !== currentSettings.yOption;
   const yearChanged = settings.yearFilter !== undefined && settings.yearFilter !== currentSettings.yearFilter;
   const rChanged = settings.rOption && settings.rOption !== currentSettings.rOption;
+  const dataVisualizationChanged = settings.dataVisualization && settings.dataVisualization !== currentSettings.dataVisualization;
 
   if (settings.rOption) currentSettings.rOption = settings.rOption;
   if (settings.xOption) currentSettings.xOption = settings.xOption;
   if (settings.yOption) currentSettings.yOption = settings.yOption;
   if (settings.yearFilter !== undefined) currentSettings.yearFilter = settings.yearFilter;
+  if (settings.dataVisualization) currentSettings.dataVisualization = settings.dataVisualization;
 
-  if (xChanged || yChanged || yearChanged) {
+  if (xChanged || yChanged || yearChanged || dataVisualizationChanged) {
     rebuildCharts();
   } else if (rChanged) {
     // Update R config in scatterplot when R option changes
@@ -365,11 +369,19 @@ window.addEventListener('compareSettingsChanged', (event) => {
   }
 });
 
+window.addEventListener('selectAllCountries', () => {
+  // Use CountrySelector's selectAll method to select all countries except World
+  if (CountrySelector && CountrySelector.selectAll) {
+    CountrySelector.selectAll();
+  }
+});
+
 window.addEventListener('clearAllCountries', () => {
   // Use CountrySelector's clearAll method to properly clear internal state
   if (CountrySelector && CountrySelector.clearAll) {
     CountrySelector.clearAll();
   }
 });
+
 
 loadData();

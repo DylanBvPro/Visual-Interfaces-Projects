@@ -5,9 +5,8 @@
 (function() {
   let selectedCountries = new Set(); // Tracks selected country codes
   let allCountries = []; // Array of {Entity, Code}
-  let currentOnSelectionChange = null; // Store callback reference
-  let currentRenderCheckboxes = null; // Store render function reference
-
+  let allData = []; // Array to store all data, assuming 'Year' and 'Country' info exists
+  
   /**
    * Initialize country selector UI
    * @param {Array} data - CSV data
@@ -16,8 +15,10 @@
    * @param {Array} defaultSelectedCodes - Array of codes selected by default
    */
   function initCountrySelector(data, containerSelector, onSelectionChange, defaultSelectedCodes = []) {
-    currentOnSelectionChange = onSelectionChange;
     const container = d3.select(containerSelector);
+
+    // Save data for computing averages later
+    allData = data;
 
     // Extract unique countries with Entity and Code
     const countryMap = {};
@@ -47,8 +48,65 @@
     // Container for checkboxes
     const listContainer = container.append('div')
       .attr('class', 'checkbox-list')
-      .style('max-height', '500px')
+      .style('max-height', '200px')
       .style('overflow-y', 'auto');
+
+    // Average Box container
+    const avgBoxContainer = container.append('div')
+      .attr('class', 'average-box')
+      .style('margin-top', '20px')
+      .style('padding', '10px')
+      .style('background-color', '#f4f4f4')
+      .style('border-radius', '5px')
+      .style('border', '1px solid #ccc')
+      .style('display', 'none') // Initially hidden
+      .html('<strong>Average per Year:</strong>');
+
+    // Create buttons for calculating averages
+    const buttonContainer = container.append('div')
+      .style('margin-top', '20px');
+
+    buttonContainer.append('button')
+      .attr('id', 'totalAverageBtn')
+      .text('Total Average')
+      .on('click', function() {
+        const totalAvg = calculateTotalAverage(allData);
+        alert(`Total Average: ${totalAvg.toFixed(2)}`);
+      });
+
+    buttonContainer.append('button')
+      .attr('id', 'enabledAverageBtn')
+      .text('Average of Enabled')
+      .on('click', function() {
+        const enabledAvg = calculateAverageOfEnabled(allData, Array.from(selectedCountries));
+        alert(`Average of Enabled: ${enabledAvg.toFixed(2)}`);
+      });
+
+    function updateAverageBox() {
+      if (selectedCountries.size > 0) {
+        // Calculate the average for each year across selected countries
+        const selectedData = allData.filter(d => selectedCountries.has(d.Code));
+        const yearData = d3.nest()
+          .key(d => d.Year)
+          .rollup(leaves => {
+            const sum = d3.sum(leaves, d => +d.Value); // Assuming 'Value' is the data we want to average
+            const count = leaves.length;
+            return sum / count; // Calculate the average
+          })
+          .entries(selectedData);
+
+        // Render the averages in the box
+        avgBoxContainer.style('display', 'block');
+        avgBoxContainer.selectAll('p').remove(); // Clear previous results
+
+        yearData.forEach(d => {
+          avgBoxContainer.append('p')
+            .text(`Year: ${d.key}, Average: ${d.value.toFixed(2)}`);
+        });
+      } else {
+        avgBoxContainer.style('display', 'none');
+      }
+    }
 
     function renderCheckboxes(filterText = '') {
       const filtered = allCountries.filter(c => 
@@ -78,6 +136,7 @@
           if (this.checked) selectedCountries.add(d.Code);
           else selectedCountries.delete(d.Code);
           onSelectionChange(Array.from(selectedCountries));
+          updateAverageBox(); // Update average box when selection changes
         });
 
       itemsEnter.append('span')
@@ -93,9 +152,6 @@
         .text(d => ' ' + d.Entity);
     }
 
-    // Store render function for external access
-    currentRenderCheckboxes = renderCheckboxes;
-
     // Initial render
     renderCheckboxes();
 
@@ -106,58 +162,23 @@
     });
   }
 
-  /**
-   * Clear all selected countries
-   */
-  function clearAllSelections() {
-    selectedCountries.clear();
-    if (currentRenderCheckboxes) {
-      currentRenderCheckboxes();
-    }
-    if (currentOnSelectionChange) {
-      currentOnSelectionChange([]);
-    }
+  // Function to calculate total average (across all countries and years)
+  function calculateTotalAverage(data) {
+    const sum = d3.sum(data, d => +d.Value); // Assuming 'Value' is the field we want to average
+    const count = data.length;
+    return sum / count;
   }
 
-  /**
-   * Select all countries except World
-   */
-  function selectAllCountries() {
-    selectedCountries.clear();
-    allCountries.forEach(country => {
-      // Exclude "World" or any entity containing "World"
-      if (country.Entity.toLowerCase() !== 'world' && !country.Entity.toLowerCase().includes('world')) {
-        selectedCountries.add(country.Code);
-      }
-    });
-    if (currentRenderCheckboxes) {
-      currentRenderCheckboxes();
-    }
-    if (currentOnSelectionChange) {
-      currentOnSelectionChange(Array.from(selectedCountries));
-    }
-  }
-
-  /**
-   * Programmatically set selected countries and refresh UI
-   * @param {Array} selectedCodes
-   * @param {Boolean} notify
-   */
-  function setSelectedCountries(selectedCodes = [], notify = true) {
-    selectedCountries = new Set(selectedCodes.filter(Boolean));
-    if (currentRenderCheckboxes) {
-      currentRenderCheckboxes();
-    }
-    if (notify && currentOnSelectionChange) {
-      currentOnSelectionChange(Array.from(selectedCountries));
-    }
+  // Function to calculate average of enabled countries
+  function calculateAverageOfEnabled(data, selectedCodes) {
+    const selectedData = data.filter(d => selectedCodes.includes(d.Code));
+    const sum = d3.sum(selectedData, d => +d.Value); // Assuming 'Value' is the field we want to average
+    const count = selectedData.length;
+    return sum / count;
   }
 
   // Expose globally
   window.CountrySelector = {
-    init: initCountrySelector,
-    clearAll: clearAllSelections,
-    selectAll: selectAllCountries,
-    setSelected: setSelectedCountries
+    init: initCountrySelector
   };
 })();

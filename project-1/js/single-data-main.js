@@ -1,13 +1,16 @@
-console.log("Hello world");
+console.log("ran main.js");
 
 // Global objects
 let data, scatterplot, barchart;
 let datafocus, focusContextVis; 
 let colorScale = null;
 let colorByCode = {};
+let geoData;
+let choroplethMap;
 
 // Global array for default selected countries (use Codes)
-const defaultSelectedCodes = ['USA', 'CHN', 'IND']; // Example, adjust as needed
+const defaultSelectedCodes = ['USA', 'CHN', 'IND'];
+let currentSelectedCodes = [...defaultSelectedCodes];
 const dropdown = document.getElementById('variable-dropdown');
 
 const dataOptions = {
@@ -17,6 +20,7 @@ const dataOptions = {
         codeColumn: 'Code',
         yearColumn: 'Year',
         actualColumn: 'Median age, total',
+        legendTitle: 'Median Age',
         projectedColumn: 'Median age (Projected)',
     },
     populationGrowth: {
@@ -25,13 +29,45 @@ const dataOptions = {
         codeColumn: 'Code',
         yearColumn: 'Year',
         actualColumn: 'Growth rate, total',
+        legendTitle: 'Population Growth Rate (%)',
         projectedColumn: 'Population growth rate (%) (Projected)'
+    },
+    population: {
+        actualData: '../data/population-with-un-projections.csv',  // Your actual data for population growth
+        entityColumn: 'Entity',
+        codeColumn: 'Code',
+        yearColumn: 'Year',
+        actualColumn: 'Population, total',
+        legendTitle: 'Population',
+        projectedColumn: 'Population, medium projection (Projected)'
+    },
+    lifeExpectancy: {
+        actualData: '../data/life-expectancy.csv',  // Your actual data for life expectancy
+        entityColumn: 'Entity',
+        codeColumn: 'Code',
+        yearColumn: 'Year',
+        actualColumn: 'Life expectancy',
+        legendTitle: 'Life Expectancy',
+        projectedColumn: 'N/A'
     },
     // Add more options as needed
 };
 /**
  * Load data from CSV file asynchronously and render charts
  */
+
+d3.json('../data/worldgeo.json')
+  .then(_geoData => {
+    geoData = _geoData;
+
+    // Create map once (empty initially)
+    choroplethMap = new ChoroplethMap({
+      parentElement: '#map'
+    }, geoData);
+    loadData('medianAge');
+  })
+  .catch(error => console.error(error));
+
 function loadData(selectedOption) {
     const selectedData = dataOptions[selectedOption];
 
@@ -43,6 +79,44 @@ function loadData(selectedOption) {
 
     d3.csv(selectedData.actualData).then(_data => {
         data = _data;
+if (geoData && choroplethMap) {
+    // Build a list of years present in the CSV
+    const years = Array.from(new Set(data.map(d => +d[selectedData.yearColumn]).filter(y => !isNaN(y)))).sort((a,b) => a - b);
+
+    // For each GeoJSON feature, attach a map of year -> { actual, projected, entity }
+    geoData.features.forEach(feature => {
+        feature.properties.data = feature.properties.data || {};
+        const rows = data.filter(d => (d.Code || d.code || '') === feature.id);
+        rows.forEach(row => {
+            const y = +row[selectedData.yearColumn];
+            if (isNaN(y)) return;
+            const actualRaw = row[selectedData.actualColumn]?.trim();
+            const projectedRaw = row[selectedData.projectedColumn]?.trim();
+            const actual = actualRaw ? +actualRaw : NaN;
+            const projected = projectedRaw ? +projectedRaw : NaN;
+            feature.properties.data[y] = {
+                actual: Number.isFinite(actual) ? actual : null,
+                projected: Number.isFinite(projected) ? projected : null,
+                entity: row[selectedData.entityColumn] || row.Entity || feature.properties.name,
+                code: row[selectedData.codeColumn] || row.Code || feature.id
+            };
+        });
+    });
+
+    // Configure the choropleth to use the `data` property and legend title
+    choroplethMap.config.valueProperty = 'data';
+    choroplethMap.config.valueKey = 'actual';
+    choroplethMap.config.legendTitle = selectedData.legendTitle || 'Value';
+
+    // Provide years to the map and show the first year
+    if (years.length > 0) {
+        choroplethMap.setYears(years);
+        choroplethMap.updateYear(0);
+    } else {
+        choroplethMap.updateVis();
+    }
+}
+
 
         // Cast numeric values - be careful with empty strings
         data.forEach(d => {
@@ -76,11 +150,18 @@ function loadData(selectedOption) {
             return out;
         }
 
-        colorScale = d3.scaleOrdinal()
-            .domain(codes)
-            .range(generatePalette(codes.length));
+const continuous = d3.scaleLinear()
+  .domain([0, 0.33, 0.66, 1])
+  .range(['#cfe2f2', '#7accc8', '#f2b880', '#0d306b'])
+  .interpolate(d3.interpolateHcl);
 
-        colorByCode = Object.fromEntries(codes.map(c => [c, colorScale(c)]));
+const palette = codes.map((_, i) => continuous(i / (codes.length - 1)));
+
+const colorScale = d3.scaleOrdinal()
+  .domain(codes)
+  .range(palette);
+  
+  colorByCode = Object.fromEntries(codes.map(c => [c, colorScale(c)]));
 
         // Split data for Barchart: actual vs projected
         const actualData = data.filter(d => !isNaN(d[selectedData.actualColumn]));
@@ -149,13 +230,15 @@ focusContextVis = new FocusContextVis({
 
 focusContextVis.updateVis(); // Re-render the focus context visualization
 
-        // Initialize country selector
-        CountrySelector.init(data, '#country-filters', (selectedCodes) => {
-            filterData(selectedCodes);
-            barchart.updateVis(data.filter(d => selectedCodes.includes(d.Code || d.code || '')));
-        }, defaultSelectedCodes);
+d3.select('#country-filters').selectAll("*").remove();
 
-        filterData(defaultSelectedCodes);
+CountrySelector.init(data, '#country-filters', (selectedCodes) => {
+    currentSelectedCodes = selectedCodes;
+    filterData(selectedCodes);
+}, currentSelectedCodes);
+
+filterData(currentSelectedCodes);
+
     }).catch(error => console.error(error));
 }
 

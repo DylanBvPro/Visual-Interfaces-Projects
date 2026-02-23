@@ -6,6 +6,11 @@ let datafocus, focusContextVis;
 let colorScale = null;
 let colorByCode = {};
 
+window.addEventListener('compareSettingsChanged', (event) => {
+  if (!scatterplot || typeof scatterplot.applySettings !== 'function') return;
+  scatterplot.applySettings(event.detail || {});
+});
+
 // Global array for default selected countries (use Codes)
 const defaultSelectedCodes = ['USA', 'CHN', 'IND']; // Example, adjust as needed
 

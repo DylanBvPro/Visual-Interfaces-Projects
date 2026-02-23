@@ -109,3 +109,326 @@
         margin-right: clamp(1rem, 5vw, 5rem);
         margin-bottom: clamp(1rem, 5vw, 5rem);
     }
+
+  #scroll-play-btn {
+  background: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0d306b;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#scroll-play-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background: #f0f4f8;
+}
+
+#scroll-play-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* Temporary duplicate styles for the second button.  I'll make an effort to fix this in the future*/
+  #scroll-play-btn2 {
+  background: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0d306b;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+#scroll-play-btn2:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  background: #f0f4f8;
+}
+
+#scroll-play-btn2:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+#year-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 8px;
+  background: #e0e7f0; /* light background for track */
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+#year-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0d306b;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#year-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#year-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0d306b;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#year-slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Temporary duplicate styles for the second slider.  I'll make an effor to fix this in the future*/
+#year-slider2 {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 8px;
+  background: #e0e7f0; /* light background for track */
+  outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+#year-slider2::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0d306b;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#year-slider2::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#year-slider2::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0d306b;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#year-slider2::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#basic-text {
+  font-family: 'Arial', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0d306b;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: inline-block;
+}
+
+/* Popup container */
+.custom-popup {
+    border-radius: 50px;
+    background: linear-gradient(135deg, #363638, #848691);
+    padding: 30px 50px;
+    text-align: center;
+    color: white;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    font-family: Arial, sans-serif;
+}
+
+/* Title */
+.custom-popup-title {
+    font-size: 24px;
+    margin-bottom: 15px;
+}
+
+/* Text */
+.custom-popup-text {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+/* Confirm button */
+.custom-popup-button {
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: black;
+    background: linear-gradient(135deg, #17a2b8, #4bc0c8);
+    color: white;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.custom-popup-button:hover {
+    background: linear-gradient(135deg, #4bc0c8, #17a2b8);
+    box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Container aligned right like #dropdown-container */
+.variable-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  font-family: Arial, sans-serif;
+}
+
+/* Individual container */
+.variable-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Label */
+.variable-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b4b4e;
+}
+
+/* Dropdown style — matches #variable-dropdown */
+.variable-select {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 5px 0;
+  padding: 10px 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #4b4b4e, #848691);
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: #4b4b4e;
+}
+
+/* Hover */
+.variable-select:hover {
+  background: #8c8d97;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Focus */
+.variable-select:focus {
+  outline: none;
+  border: 2px solid #b1b1b4;
+}
+
+
+.variable-button:hover {
+  background: #8c8d97;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Output text */
+.variable-output {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b4b4e;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .variable-wrapper {
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .variable-select {
+    width: 100%;
+    max-width: 250px;
+  }
+}
+
+.select-all-button {
+  margin-top: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.select-all-button:focus {
+  outline: none;
+  border: 2px solid #45a049;
+}
+
+.select-all-button:hover {
+  background: #45a049;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.clear-all-button {
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 20px;
+  background: #d64c42;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.clear-all-button:focus {
+  outline: none;
+  border: 2px solid #b33a2f;
+}
+
+.clear-all-button:hover {
+  background: #b33a2f;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
