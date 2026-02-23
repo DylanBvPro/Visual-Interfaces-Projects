@@ -17,7 +17,7 @@
             border: 1px solid #ccc;
             padding: 10px;
             width: 250px;
-            max-height: 300px;
+            max-height: 600px;
             overflow-y: auto;
             margin-bottom: 20px;
         }
@@ -51,7 +51,7 @@
             /* fills horizontal space */
             height: 0%;
             /* or any relative height like viewport height */
-            min-height: 300px;
+            min-height: 600px;
             /* optional fallback */
             position: relative;
             /* helps with tooltips */
@@ -72,9 +72,10 @@
         </nav>
     </header>
 
-    <h1>Median Age Visualization</h1>
+    <h1>Data Comparative Analysis</h1>
 
     <!-- Country selector (search + checkboxes) -->
+     <div id="compare-settings-anchor"></div>
     <div id="page-content">
         <div id="chart-container" style="display: flex; gap: 20px; width: 100%; overflow: auto;">
             <svg id="scatterplot" style="flex: 1; overflow: auto;"></svg>
@@ -96,13 +97,13 @@
         <!-- D3 bundle -->
         <script src="../js/d3.v6.min.js"></script>
         <script src="../js/extrabuttons.js"></script>
+        <script src="../js/extrasettings.js"></script>
         <script src="../js/countryselect.js"></script>
         <script src="../js/countryIso.js"></script>
-        <script src="../js/compare-scatterplot.js"></script>
+        <script src="../js/scatterplot.js"></script>
         <script src="../js/barchart.js"></script>
         <!-- Our JS code - INCLUDING the new files-->
-        <script src="../js/comparative.js"></script>
-
+     <script src ="../js/populationGrowthRate.js"></script>
 
     </div>
 

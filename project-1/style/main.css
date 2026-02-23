@@ -301,5 +301,109 @@
     box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
 }
 
+/* Container aligned right like #dropdown-container */
+.variable-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  font-family: Arial, sans-serif;
+}
+
+/* Individual container */
+.variable-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Label */
+.variable-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b4b4e;
+}
+
+/* Dropdown style — matches #variable-dropdown */
+.variable-select {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 5px 0;
+  padding: 10px 20px;
+  font-size: 14px;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #4b4b4e, #848691);
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: #4b4b4e;
+}
+
+/* Hover */
+.variable-select:hover {
+  background: #8c8d97;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Focus */
+.variable-select:focus {
+  outline: none;
+  border: 2px solid #b1b1b4;
+}
 
 
+.variable-button:hover {
+  background: #8c8d97;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Output text */
+.variable-output {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b4b4e;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+  .variable-wrapper {
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .variable-select {
+    width: 100%;
+    max-width: 250px;
+  }
+}
+
+.clear-all-button {
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 20px;
+  background: #d64c42;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.clear-all-button:focus {
+  outline: none;
+  border: 2px solid #b1b1b4;
+}
+
+.clear-all-button:hover {
+  background: #8c8d97;
+  box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}

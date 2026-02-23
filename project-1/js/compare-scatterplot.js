@@ -19,6 +19,9 @@ class Comparescatterplot {
             projectedColumnGrowth: _config.projectedColumnGrowth,
             containerWidth: parent ? parent.clientWidth : (_config.containerWidth || 2000),
             containerHeight: parent ? parent.clientHeight : (_config.containerHeight || 300),
+            pointRadius: _config.pointRadius || 30,
+            xMode: _config.xMode || 'auto',
+            yMode: _config.yMode || 'auto',
             margin: _config.margin || { top: 25, right: 20, bottom: 20, left: 35 },
             tooltipPadding: _config.tooltipPadding || 15
         };
@@ -103,17 +106,35 @@ updateVis() {
     vis.xValue = d => {
         const actualAge = +d[vis.config.actualColumnAge];
         const projectedAge = +d[vis.config.projectedColumnAge];
-        // Use actualColumnAge if it's valid, otherwise use projectedColumnAge
+
+        if (vis.config.xMode === 'actual') {
+            return isNaN(actualAge) ? NaN : actualAge;
+        }
+
+        if (vis.config.xMode === 'projected') {
+            return isNaN(projectedAge) ? NaN : projectedAge;
+        }
+
         return isNaN(actualAge) ? (isNaN(projectedAge) ? NaN : projectedAge) : actualAge;
     };
 
     vis.yValue = d => {
         const totalRaw = d[vis.config.actualColumnGrowth];
         const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
-        if (isFinite(total)) return total;
+
+        if (vis.config.yMode === 'actual') {
+            return isFinite(total) ? total : NaN;
+        }
+
         const projectedRaw = d[vis.config.projectedColumnGrowth];
         const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? +projectedRaw : NaN;
+
+        if (vis.config.yMode === 'projected') {
+            return isFinite(projected) ? projected : NaN;
+        }
+
         if (isFinite(projected)) return projected;
+        if (isFinite(total)) return total;
         return NaN;
     };
 
@@ -166,7 +187,7 @@ renderVis() {
         .data(vis.data.filter(d => !isNaN(vis.xValue(d)) && !isNaN(vis.yValue(d))), d => (d.code || d.Code || d.entity || d.Entity || d.trail))
         .join('circle')
         .attr('class', 'point')
-        .attr('r', 30)
+        .attr('r', vis.config.pointRadius)
         .attr('cy', d => vis.yScale(vis.yValue(d)))
         .attr('cx', d => vis.xScale(vis.xValue(d)))
         .attr('fill', d => {
@@ -297,6 +318,25 @@ renderVis() {
     vis.xAxisG.call(vis.xAxis).call(g => g.select('.domain').remove());
     vis.yAxisG.call(vis.yAxis).call(g => g.select('.domain').remove());
 }
+
+    applySettings(settings = {}) {
+        if (settings.radius !== undefined) {
+            const radius = Number(settings.radius);
+            if (isFinite(radius) && radius > 0) {
+                this.config.pointRadius = radius;
+            }
+        }
+
+        if (['auto', 'actual', 'projected'].includes(settings.xMode)) {
+            this.config.xMode = settings.xMode;
+        }
+
+        if (['auto', 'actual', 'projected'].includes(settings.yMode)) {
+            this.config.yMode = settings.yMode;
+        }
+
+        this.updateVis();
+    }
 
 
 

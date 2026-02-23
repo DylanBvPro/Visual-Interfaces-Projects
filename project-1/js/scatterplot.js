@@ -12,13 +12,20 @@ class Scatterplot {
         this.config = {
             parentElement: _config.parentElement,
             colorScale: _config.colorScale,
-            xAxisName: _config.xAxisName || 'Entity',
+            xAxisName: _config.xAxisName || 'Year',
             yAxisName: _config.yAxisName || 'Value',
             groupColumn: _config.groupColumn || 'Entity',   // x-axis categories
             codeColumn: _config.codeColumn || 'Code',       // for flags or IDs
             yearColumn: _config.yearColumn || 'Year',       // year column
             actualColumn: _config.actualColumn,
             projectedColumn: _config.projectedColumn,
+            xActualColumn: _config.xActualColumn || _config.yearColumn || 'Year',
+            xProjectedColumn: _config.xProjectedColumn,
+            isComparative: _config.isComparative || false,
+            yearFilter: _config.yearFilter || null,
+            rActualColumn: _config.rActualColumn || null,
+            rProjectedColumn: _config.rProjectedColumn || null,
+            rAxisName: _config.rAxisName || 'Radius',
             containerWidth: parent ? parent.clientWidth : (_config.containerWidth || 2000),
             containerHeight: parent ? parent.clientHeight : (_config.containerHeight || 300),
             margin: _config.margin || { top: 25, right: 20, bottom: 20, left: 35 },
@@ -36,7 +43,7 @@ class Scatterplot {
     const absVal = Math.abs(value);
     if (absVal >= 1e9) return (value / 1e9).toFixed(1) + 'B';
     if (absVal >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-    if (absVal >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    if (absVal >= 1e4) return (value / 1e3).toFixed(1) + 'K';
     return value.toString();
 }
 
@@ -95,12 +102,36 @@ class Scatterplot {
     /**
      * Prepare the data and scales before we render it.
      */
-    updateVis() {
+    updateVis(yearIndex) {
         let vis = this;
+
+        // Filter data by year if in comparative mode with year filter
+        let workingData = vis.data;
+        if (vis.config.isComparative && vis.config.yearFilter) {
+            const targetYear = Number(vis.config.yearFilter);
+            if (Number.isFinite(targetYear)) {
+                workingData = vis.data.filter(d => d[vis.config.yearColumn] === targetYear);
+            }
+        }
 
         // Specify accessor functions for the data
         vis.colorValue = d => (d.code || d.Code || d.entity || d.Entity || '').toString().trim();
-        vis.xValue = d => +d.year || +d.Year || NaN;
+        
+        vis.xValue = d => {
+            const xActualRaw = d[vis.config.xActualColumn];
+            const xActual = xActualRaw !== null && xActualRaw !== undefined && xActualRaw !== '' ? +xActualRaw : NaN;
+
+            if (isFinite(xActual)) return xActual;
+
+            if (vis.config.xProjectedColumn) {
+                const xProjectedRaw = d[vis.config.xProjectedColumn];
+                const xProjected = xProjectedRaw !== null && xProjectedRaw !== undefined && xProjectedRaw !== '' ? +xProjectedRaw : NaN;
+                if (isFinite(xProjected)) return xProjected;
+            }
+
+            return NaN;
+        };
+        
         vis.yValue = d => {
             const totalRaw = d[vis.config.actualColumn];
             const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? +totalRaw : NaN;
@@ -114,10 +145,42 @@ class Scatterplot {
 
             return NaN;
         };
+        
+        // R value accessor for radius scaling
+        vis.rValue = d => {
+            if (!vis.config.rActualColumn) return 1; // Default if no R column specified
+            
+            const rActualRaw = d[vis.config.rActualColumn];
+            const rActual = rActualRaw !== null && rActualRaw !== undefined && rActualRaw !== '' ? +rActualRaw : NaN;
+
+            if (isFinite(rActual)) return rActual;
+
+            if (vis.config.rProjectedColumn) {
+                const rProjectedRaw = d[vis.config.rProjectedColumn];
+                const rProjected = rProjectedRaw !== null && rProjectedRaw !== undefined && rProjectedRaw !== '' ? +rProjectedRaw : NaN;
+                if (isFinite(rProjected)) return rProjected;
+            }
+
+            return NaN;
+        };
 
         // Set the scale input domains (ignore NaN values)
-        const xVals = vis.data.map(vis.xValue).filter(v => !isNaN(v));
-        const yVals = vis.data.map(vis.yValue).filter(v => !isNaN(v));
+        const xVals = workingData.map(vis.xValue).filter(v => !isNaN(v));
+        const yVals = workingData.map(vis.yValue).filter(v => !isNaN(v));
+        const rVals = workingData.map(vis.rValue).filter(v => !isNaN(v) && v > 0);
+
+        // Create radius scale for dynamic sizing
+        if (rVals.length > 0 && vis.config.isComparative) {
+            const rMin = d3.min(rVals);
+            const rMax = d3.max(rVals);
+            // Use sqrt scale for area-based sizing (more perceptually accurate)
+            vis.radiusScale = d3.scaleSqrt()
+                .domain([rMin, rMax])
+                .range([3, 50]); // Min and max pixel radius
+        } else {
+            // Fallback to constant radius if not in comparative mode
+            vis.radiusScale = () => 4;
+        }
 
         const xMin = d3.min(xVals);
         const xMax = d3.max(xVals);
@@ -126,13 +189,20 @@ class Scatterplot {
         if (isFinite(xMin) && isFinite(xMax)) {
             vis.xScale.domain([xMin, xMax]);
 
-            // compute decade-aligned tick values every 10 years
-            const startYear = Math.floor(xMin / 10) * 10;
-            const endYear = Math.ceil(xMax / 10) * 10;
-            const yearTicks = d3.range(startYear, endYear + 1, 10);
-
-            // apply integer formatting and explicit tick values (years only)
-            vis.xAxis.tickValues(yearTicks).tickFormat(d3.format("d"));
+            // Check if x-axis is Year for special formatting
+            const isYearAxis = vis.config.xActualColumn === 'Year' || vis.config.xActualColumn === vis.config.yearColumn;
+            
+            if (isYearAxis) {
+                // compute decade-aligned tick values every 10 years
+                const startYear = Math.floor(xMin / 10) * 10;
+                const endYear = Math.ceil(xMax / 10) * 10;
+                const yearTicks = d3.range(startYear, endYear + 1, 10);
+                // apply integer formatting and explicit tick values (years only)
+                vis.xAxis.tickValues(yearTicks).tickFormat(d3.format("d"));
+            } else {
+                // For non-year axes, use default ticks with number formatting
+                vis.xAxis.tickValues(null).tickFormat(d => vis.formatNumber(d));
+            }
         } else {
             vis.xScale.domain(d3.extent(xVals));
         }
@@ -147,7 +217,7 @@ class Scatterplot {
         ]);
 
         // Calculate the average point (mean of x and y) only if more than 1 data point exists for each year
-        vis.avgPointsByYear = d3.groups(vis.data, d => d[vis.config.yearColumn])
+        vis.avgPointsByYear = d3.groups(workingData, d => d[vis.config.yearColumn])
             .map(([year, group]) => {
                 if (group.length > 1) {  // Only calculate average if there are more than 1 data point
                     const avgY = group.reduce((sum, d) => sum + vis.yValue(d), 0) / group.length;
@@ -167,7 +237,7 @@ class Scatterplot {
             vis.avgPoint = null;
         }
 
-        vis.renderVis();
+        vis.renderVis(workingData);
 
         vis.chart.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
         vis.svg.selectAll('.axis-title').remove();  // Remove previous axis titles if they exist
@@ -175,11 +245,11 @@ class Scatterplot {
         // Append x-axis title
         vis.chart.append('text')
             .attr('class', 'axis-title')
-            .attr('y', vis.height - 15)
+            .attr('y', vis.height + 15)
             .attr('x', vis.width + 10)
             .attr('dy', '.71em')
             .style('text-anchor', 'end')
-            .text('Year');
+            .text(vis.config.xAxisName);
 
         // Append y-axis title
         vis.svg.append('text')
@@ -189,7 +259,7 @@ class Scatterplot {
             .attr('dy', '.71em')
             .text(vis.config.yAxisName);
         vis.zoom = d3.zoom()
-            .scaleExtent([0.9, 8]) // Min and max zoom
+            .scaleExtent([0.95, 8]) // Min and max zoom
             .translateExtent([
                 [0, 0], // Top-left corner (min x, min y)
                 [vis.width, vis.height] // Bottom-right corner (max x, max y)
@@ -200,21 +270,31 @@ class Scatterplot {
 
         // Apply zoom to SVG
         vis.svg.call(vis.zoom);
+        
     }
 
 
     /**
      * Bind data to visual elements.
      */
-    renderVis() {
+    renderVis(workingData) {
         let vis = this;
 
+        // Use passed workingData or fall back to vis.data
+        const maxPoints = 1000;
+        const dataToRender = workingData || vis.data;
+        const scaleFactor = Math.min(1, maxPoints / dataToRender.length);
         // Add circles for data points
         const circles = vis.chart.selectAll('.point')
-            .data(vis.data.filter(d => !isNaN(vis.xValue(d)) && !isNaN(vis.yValue(d))), d => (d.code || d.Code || d.entity || d.Entity || d.trail))
+            .data(dataToRender.filter(d => !isNaN(vis.xValue(d)) && !isNaN(vis.yValue(d))), d => (d.code || d.Code || d.entity || d.Entity || d.trail))
             .join('circle')
             .attr('class', 'point')
-            .attr('r', 4)
+            .attr('fill-opacity', 0.5)
+            .attr('r', d => {
+                const rVal = vis.rValue(d);
+                const base = isFinite(rVal) ? vis.radiusScale(rVal) : 4;
+                return base * scaleFactor;
+            })
             .attr('cy', d => vis.yScale(vis.yValue(d)))
             .attr('cx', d => vis.xScale(vis.xValue(d)))
             .attr('fill', d => {
@@ -275,62 +355,111 @@ class Scatterplot {
        // Tooltip for regular data points
 circles
     .on('mouseover', (event, d) => {
-        const totalRaw = d[vis.config.actualColumn];
-        const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? Number(totalRaw) : null;
-        const projectedRaw = d[vis.config.projectedColumn];
-        const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? Number(projectedRaw) : null;
-
-        let valueLabel = '';
-        let valueNumber = null;
-        let isProjected = false;
-
-        if (isFinite(total)) {
-            valueLabel = vis.config.actualColumn;
-            valueNumber = total;
-        } else if (isFinite(projected)) {
-            valueLabel = vis.config.projectedColumn;
-            valueNumber = projected;
-            isProjected = true;
-        }
-
-        // ===== Get flag URL =====
         const flagUrl = getFlagUrl(d.code || d.Code || d.entity || d.Entity);
 
-        // ===== Format the number if needed =====
-        let valueDisplay;
-        if (valueNumber === null || !isFinite(valueNumber)) {
-            valueDisplay = 'No data';
-        } else if (Math.abs(valueNumber) >= 1e3) {
-            valueDisplay = vis.formatNumber(valueNumber);  // Use K/M/B shorthand
+        if (vis.config.isComparative) {
+            // Multi-variable comparison mode: show X, Y, and R values
+            const xValue = vis.xValue(d);
+            const yValue = vis.yValue(d);
+            
+            // Get R value
+            const rActualRaw = vis.config.rActualColumn ? d[vis.config.rActualColumn] : null;
+            const rActual = rActualRaw !== null && rActualRaw !== undefined && rActualRaw !== '' ? Number(rActualRaw) : null;
+            const rProjectedRaw = vis.config.rProjectedColumn ? d[vis.config.rProjectedColumn] : null;
+            const rProjected = rProjectedRaw !== null && rProjectedRaw !== undefined && rProjectedRaw !== '' ? Number(rProjectedRaw) : null;
+            
+            let rValue = null;
+            let rIsProjected = false;
+            if (isFinite(rActual)) {
+                rValue = rActual;
+            } else if (isFinite(rProjected)) {
+                rValue = rProjected;
+                rIsProjected = true;
+            }
+
+            // Format values
+            const xDisplay = isFinite(xValue) ? (Math.abs(xValue) >= 1e3 ? vis.formatNumber(xValue) : xValue.toFixed(2)) : 'N/A';
+            const yDisplay = isFinite(yValue) ? (Math.abs(yValue) >= 1e3 ? vis.formatNumber(yValue) : yValue.toFixed(2)) : 'N/A';
+            const rDisplay = rValue !== null && isFinite(rValue) ? (Math.abs(rValue) >= 1e3 ? vis.formatNumber(rValue) : rValue.toFixed(2)) : 'N/A';
+
+            d3.select('#tooltip')
+                .style('display', 'block')
+                .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
+                .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
+                .style('background-color', 'rgba(255,255,255,0.95)')
+                .style('border', '1px solid #ccc')
+                .style('border-radius', '8px')
+                .style('padding', '10px 15px')
+                .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+                .style('font-family', 'Arial, sans-serif')
+                .style('font-size', '16px')
+                .style('color', '#333')
+                .html(`
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
+                        ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
+                    </div>
+                    <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
+                        <li><strong>${vis.config.xAxisName}:</strong> ${xDisplay}</li>
+                        <li><strong>${vis.config.yAxisName}:</strong> ${yDisplay}</li>
+                        <li><strong>${vis.config.rAxisName}:</strong> ${rDisplay}${rIsProjected ? ' (Projected)' : ''}</li>
+                    </ul>
+                `);
         } else {
-            valueDisplay = valueNumber.toFixed(2);  // Keep small numbers precise
+            // Single variable mode: show original tooltip
+            const totalRaw = d[vis.config.actualColumn];
+            const total = totalRaw !== null && totalRaw !== undefined && totalRaw !== '' ? Number(totalRaw) : null;
+            const projectedRaw = d[vis.config.projectedColumn];
+            const projected = projectedRaw !== null && projectedRaw !== undefined && projectedRaw !== '' ? Number(projectedRaw) : null;
+
+            let valueLabel = '';
+            let valueNumber = null;
+            let isProjected = false;
+
+            if (isFinite(total)) {
+                valueLabel = vis.config.actualColumn;
+                valueNumber = total;
+            } else if (isFinite(projected)) {
+                valueLabel = vis.config.projectedColumn;
+                valueNumber = projected;
+                isProjected = true;
+            }
+
+            let valueDisplay;
+            if (valueNumber === null || !isFinite(valueNumber)) {
+                valueDisplay = 'No data';
+            } else if (Math.abs(valueNumber) >= 1e3) {
+                valueDisplay = vis.formatNumber(valueNumber);
+            } else {
+                valueDisplay = valueNumber.toFixed(2);
+            }
+
+            const valueLabelHTML = `<strong>${valueDisplay}</strong>${isProjected ? ' (Projected)' : ''}`;
+
+            d3.select('#tooltip')
+                .style('display', 'block')
+                .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
+                .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
+                .style('background-color', 'rgba(255,255,255,0.95)')
+                .style('border', '1px solid #ccc')
+                .style('border-radius', '8px')
+                .style('padding', '10px 15px')
+                .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
+                .style('font-family', 'Arial, sans-serif')
+                .style('font-size', '16px')
+                .style('color', '#333')
+                .html(`
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
+                        ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
+                    </div>
+                    <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
+                    <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
+                        <li>${valueLabel}: ${valueLabelHTML}</li>
+                    </ul>
+                `);
         }
-
-        const valueLabelHTML = `<strong>${valueDisplay}</strong>${isProjected ? ' (Projected)' : ''}`;
-
-        // ===== Tooltip Styling =====
-        d3.select('#tooltip')
-            .style('display', 'block')
-            .style('left', (event.pageX + vis.config.tooltipPadding) + 'px')
-            .style('top', (event.pageY + vis.config.tooltipPadding) + 'px')
-            .style('background-color', 'rgba(255,255,255,0.95)')
-            .style('border', '1px solid #ccc')
-            .style('border-radius', '8px')
-            .style('padding', '10px 15px')
-            .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
-            .style('font-family', 'Arial, sans-serif')
-            .style('font-size', '16px')
-            .style('color', '#333')
-            .html(`
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                    <span style="font-weight: bold; font-size: 18px;">${d.entity || d.Entity || ''}</span>
-                    ${flagUrl ? `<img src="${flagUrl}" style="width:48px; height:32px; border-radius: 3px;">` : ''}
-                </div>
-                <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${d.year || d.Year || ''}</i></div>
-                <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
-                    <li>${valueLabel}: ${valueLabelHTML}</li>
-                </ul>
-            `);
     })
     .on('mouseleave', () => {
         d3.select('#tooltip').style('display', 'none');

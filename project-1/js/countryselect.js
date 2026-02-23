@@ -5,6 +5,8 @@
 (function() {
   let selectedCountries = new Set(); // Tracks selected country codes
   let allCountries = []; // Array of {Entity, Code}
+  let currentOnSelectionChange = null; // Store callback reference
+  let currentRenderCheckboxes = null; // Store render function reference
 
   /**
    * Initialize country selector UI
@@ -14,6 +16,7 @@
    * @param {Array} defaultSelectedCodes - Array of codes selected by default
    */
   function initCountrySelector(data, containerSelector, onSelectionChange, defaultSelectedCodes = []) {
+    currentOnSelectionChange = onSelectionChange;
     const container = d3.select(containerSelector);
 
     // Extract unique countries with Entity and Code
@@ -44,7 +47,7 @@
     // Container for checkboxes
     const listContainer = container.append('div')
       .attr('class', 'checkbox-list')
-      .style('max-height', '200px')
+      .style('max-height', '500px')
       .style('overflow-y', 'auto');
 
     function renderCheckboxes(filterText = '') {
@@ -90,6 +93,9 @@
         .text(d => ' ' + d.Entity);
     }
 
+    // Store render function for external access
+    currentRenderCheckboxes = renderCheckboxes;
+
     // Initial render
     renderCheckboxes();
 
@@ -100,8 +106,22 @@
     });
   }
 
+  /**
+   * Clear all selected countries
+   */
+  function clearAllSelections() {
+    selectedCountries.clear();
+    if (currentRenderCheckboxes) {
+      currentRenderCheckboxes();
+    }
+    if (currentOnSelectionChange) {
+      currentOnSelectionChange([]);
+    }
+  }
+
   // Expose globally
   window.CountrySelector = {
-    init: initCountrySelector
+    init: initCountrySelector,
+    clearAll: clearAllSelections
   };
 })();
