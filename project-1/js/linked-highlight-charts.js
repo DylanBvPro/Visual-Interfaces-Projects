@@ -77,7 +77,7 @@
       .attr('id', 'linked-chart-tooltip')
       .style('position', 'absolute')
       .style('display', 'none')
-      .style('pointer-events', 'none')
+      .style('pointer-events', 'auto')
       .style('background-color', 'rgba(255,255,255,0.95)')
       .style('border', '1px solid #ccc')
       .style('border-radius', '8px')
@@ -85,7 +85,9 @@
       .style('box-shadow', '0 4px 12px rgba(0,0,0,0.15)')
       .style('font-family', 'Arial, sans-serif')
       .style('font-size', '16px')
-      .style('color', '#333');
+      .style('color', '#333')
+      .style('max-width', '500px')
+      .style('z-index', '10000');
 
     return tooltip;
   }
@@ -95,6 +97,33 @@
     if (typeof getCountryISO2 !== 'function') return '';
     const iso2 = getCountryISO2(countryCode);
     return iso2 ? `https://flagcdn.com/64x48/${iso2.toLowerCase()}.png` : '';
+  }
+
+  function toggleCountrySelection(state, countryCode) {
+    const code = (countryCode || '').trim();
+    if (!code) return;
+
+    const nextSelected = new Set(state.selectedCodes);
+    if (nextSelected.has(code)) {
+      nextSelected.delete(code);
+    } else {
+      nextSelected.add(code);
+    }
+
+    const shouldSelect = nextSelected.has(code);
+    const container = document.querySelector(state.config.countryFilterSelector);
+    const checkbox = container
+      ? container.querySelector(`input.country-checkbox[value="${code}"]`)
+      : null;
+
+    if (checkbox) {
+      checkbox.checked = shouldSelect;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+
+    state.selectedCodes = nextSelected;
+    render(state);
   }
 
   function createState(config, rows) {
@@ -234,8 +263,13 @@
       .attr('opacity', (d) => state.selectedCodes.has(d.code) ? 0.95 : 0.30)
       .attr('stroke', (d) => state.selectedCodes.has(d.code) ? '#222' : 'none')
       .attr('stroke-width', (d) => state.selectedCodes.has(d.code) ? 0.8 : 0)
+      .style('cursor', 'pointer')
       .on('mousemove', (event, d) => {
         showCountryTooltip(event, d);
+      })
+      .on('click', (event, d) => {
+        event.stopPropagation();
+        toggleCountrySelection(state, d.code);
       })
       .on('mouseleave', () => {
         tooltip.style('display', 'none');
@@ -258,7 +292,30 @@
     const brush = d3.brush()
       .extent([[0, 0], [innerW, innerH]])
       .on('end', (event) => {
-        if (!event.selection) return;
+        if (!event.selection) {
+          const source = event.sourceEvent;
+          const isClickLike = source && (source.type === 'click' || source.type === 'mouseup');
+          if (isClickLike) {
+            const [mx, my] = d3.pointer(source, plot.node());
+            let closest = null;
+            let minDistance = Infinity;
+
+            ranked.forEach((d) => {
+              const dx = activeX(d.rank) - mx;
+              const dy = activeY(d.value) - my;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist < minDistance) {
+                minDistance = dist;
+                closest = d;
+              }
+            });
+
+            if (closest && minDistance <= 14) {
+              toggleCountrySelection(state, closest.code);
+            }
+          }
+          return;
+        }
 
         const [[x0, y0], [x1, y1]] = event.selection;
         const brushedCodes = ranked
@@ -287,41 +344,50 @@
       .attr('class', 'linked-brush-layer')
       .call(brush);
 
-    // Create a separate transparent overlay for tooltip detection
-    // This sits on top of the brush and detects hover without interfering with drag
-    plot.selectAll('.linked-tooltip-layer').remove();
-    plot.append('rect')
-      .attr('class', 'linked-tooltip-layer')
+    // Add a background rect for plot area hover detection (doesn't block brush)
+    plot.selectAll('.linked-tooltip-background').remove();
+    plot.insert('rect', ':first-child')
+      .attr('class', 'linked-tooltip-background')
       .attr('x', 0)
       .attr('y', 0)
       .attr('width', innerW)
       .attr('height', innerH)
       .attr('fill', 'none')
-      .attr('pointer-events', 'all')
-      .on('mousemove', (event) => {
-        const [mx, my] = d3.pointer(event, plot.node());
-        let closest = null;
-        let minDistance = Infinity;
-
-        ranked.forEach((d) => {
-          const dx = activeX(d.rank) - mx;
-          const dy = activeY(d.value) - my;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closest = d;
-          }
-        });
-
-        if (closest && minDistance <= 14) {
-          showCountryTooltip(event, closest);
-        } else {
-          tooltip.style('display', 'none');
-        }
-      })
+      .attr('pointer-events', 'none')
       .on('mouseleave', () => {
         tooltip.style('display', 'none');
       });
+
+    // Monitor the entire plot area for hover, but don't block interactions
+    plot.on('mousemove.tooltip', function(event) {
+      // Only show tooltip if not actively brushing
+      if (event.sourceEvent && event.sourceEvent.buttons !== 0) {
+        tooltip.style('display', 'none');
+        return;
+      }
+
+      const [mx, my] = d3.pointer(event, this);
+      let closest = null;
+      let minDistance = Infinity;
+
+      ranked.forEach((d) => {
+        const dx = activeX(d.rank) - mx;
+        const dy = activeY(d.value) - my;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDistance) {
+          minDistance = dist;
+          closest = d;
+        }
+      });
+
+      if (closest && minDistance <= 14) {
+        showCountryTooltip(event, closest);
+      } else {
+        tooltip.style('display', 'none');
+      }
+    }).on('mouseleave.tooltip', () => {
+      tooltip.style('display', 'none');
+    });
 
     // Create zoom handler with stopImmediatePropagation to avoid blocking brush
     const scatterZoom = d3.zoom()
@@ -384,7 +450,11 @@
         x1,
         allCount: 0,
         selectedCount: 0,
-        selectedCountries: []
+        selectedCountries: [],
+        allActualCount: 0,
+        allProjectedCount: 0,
+        selectedActualCount: 0,
+        selectedProjectedCount: 0
       };
     });
 
@@ -393,10 +463,21 @@
         ? Math.min(binCount - 1, Math.floor((d.value - minValue) / binSize))
         : 0;
       const bin = bins[binIndex];
+      const usesActual = Number.isFinite(d.actual);
       bin.allCount += 1;
+      if (usesActual) {
+        bin.allActualCount += 1;
+      } else {
+        bin.allProjectedCount += 1;
+      }
       if (state.selectedCodes.has(d.code)) {
         bin.selectedCount += 1;
         bin.selectedCountries.push(d.entity);
+        if (usesActual) {
+          bin.selectedActualCount += 1;
+        } else {
+          bin.selectedProjectedCount += 1;
+        }
       }
     });
 
@@ -459,28 +540,136 @@
       .attr('x', innerW)
       .attr('y', innerH + 56)
       .attr('text-anchor', 'end')
-      .text('8 equal value categories');
+      .text(`${cfg.actualColumn} (range)`);
 
     const tooltip = ensureTooltip();
 
     const showBinTooltip = (event, d) => {
-      const selectedPreview = d.selectedCountries.length > 0
-        ? d.selectedCountries.slice(0, 6).join(', ') + (d.selectedCountries.length > 6 ? '…' : '')
-        : 'None';
+      // Clear any existing auto-scroll intervals
+      const existingScrollContainer = tooltip.node()?.querySelector('.country-list-container');
+      if (existingScrollContainer?._autoScrollInterval) {
+        clearInterval(existingScrollContainer._autoScrollInterval);
+      }
+      
+      // Create styled badges for selected countries with flags
+      const selectedList = d.selectedCountries.length > 0
+        ? d.selectedCountries.map(country => {
+            // Try to get the country code for this entity name
+            const countryRow = yearRows.find(r => r.entity === country);
+            const code = countryRow ? countryRow.code : '';
+            const flagUrl = getFlagUrlSafe(code);
+            const colorHue = (country.charCodeAt(0) + country.length) % 360;
+            
+            return `
+              <div style="
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 4px 10px;
+                margin: 3px;
+                background: linear-gradient(135deg, hsl(${colorHue}, 65%, 92%), hsl(${colorHue}, 55%, 85%));
+                border: 1px solid hsl(${colorHue}, 45%, 75%);
+                border-radius: 16px;
+                font-size: 12px;
+                font-weight: 500;
+                color: #333;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              ">
+                ${flagUrl ? `<img src="${flagUrl}" style="width: 20px; height: 15px; border-radius: 2px; object-fit: cover;">` : '🌍'}
+                <span>${country}</span>
+              </div>`;
+          }).join('')
+        : '<div style="text-align: center; padding: 8px; color: #999; font-style: italic;">No countries selected in this bin</div>';
+      
+      // Calculate tooltip position to keep it in viewport
+      const tooltipWidth = 500;
+      let left = event.pageX + 12;
+      let top = event.pageY + 12;
+      
+      // Adjust horizontal position if tooltip would go off right edge
+      if (left + tooltipWidth > window.pageXOffset + window.innerWidth) {
+        left = event.pageX - tooltipWidth - 12;
+      }
+      
       tooltip
         .style('display', 'block')
-        .style('left', `${event.pageX + 12}px`)
-        .style('top', `${event.pageY + 12}px`)
+        .style('left', `${left}px`)
+        .style('top', `${top}px`)
         .html(`
-          <div style="font-weight: bold; font-size: 18px; margin-bottom: 8px;">Value Category ${d.idx + 1}/8</div>
+          <style>
+            @keyframes autoScroll {
+              0% { scroll-behavior: smooth; }
+              100% { scroll-behavior: smooth; }
+            }
+            .country-list-container {
+              animation: autoScroll 1s linear infinite;
+            }
+          </style>
+          <div style="font-weight: bold; font-size: 18px; margin-bottom: 8px;">${cfg.actualColumn} ${d.idx + 1}/8</div>
           <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>Year: ${year}</i></div>
           <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
             <li>Range: <strong>${formatShort(d.x0)} to ${formatShort(d.x1)}</strong></li>
             <li>All Countries: <strong>${d.allCount}</strong></li>
+            <li>All Type: <strong>Actual ${d.allActualCount}, Projected ${d.allProjectedCount}</strong></li>
             <li>Selected Countries: <strong>${d.selectedCount}</strong></li>
-            <li>Selected in Bin: <strong>${selectedPreview}</strong></li>
+            <li>Selected Type: <strong>Actual ${d.selectedActualCount}, Projected ${d.selectedProjectedCount}</strong></li>
           </ul>
+          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #ddd;">
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px; color: #0d306b;">
+              Selected in this Bin ${d.selectedCountries.length > 0 ? `(${d.selectedCountries.length})` : ''}
+            </div>
+            <div class="country-list-container" style="
+              display: flex;
+              flex-wrap: wrap;
+              gap: 2px;
+              padding: 4px;
+              background: #f8f9fa;
+              border-radius: 8px;
+              cursor: default;
+              max-height: 300px;
+              overflow-y: auto;
+              scroll-behavior: smooth;
+            ">
+              ${selectedList}
+            </div>
+          </div>
         `);
+      
+      // Start auto-scroll animation
+      const scrollContainer = tooltip.node().querySelector('.country-list-container');
+      if (scrollContainer && d.selectedCountries.length > 8) {
+        let scrollPos = 0;
+        const scrollSpeed = 0.8;
+        let isPaused = false;
+        
+        const autoScrollInterval = setInterval(() => {
+          if (tooltip.style('display') === 'none') {
+            clearInterval(autoScrollInterval);
+            return;
+          }
+          
+          if (isPaused) return;
+          
+          const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+          
+          scrollPos += scrollSpeed;
+          scrollContainer.scrollTop = scrollPos;
+          
+          if (scrollPos >= maxScroll) {
+            // Reached the bottom, pause
+            isPaused = true;
+            setTimeout(() => {
+              // Reset everything back to top
+              scrollPos = 0;
+              scrollContainer.scrollTop = 0;
+              isPaused = false;
+            }, 1000); // 1 second rest at bottom
+          }
+        }, 20);
+        
+        // Store interval reference to clear it later
+        scrollContainer._autoScrollInterval = autoScrollInterval;
+      }
     };
 
     plot.selectAll('rect.bin-all')
@@ -510,6 +699,40 @@
       .attr('stroke-width', (d) => d.selectedCount > 0 ? 1.2 : 0);
 
     plot.selectAll('rect.bin-hover-layer').remove();
+    
+    let hideTooltipTimeout = null;
+    
+    const scheduleHideTooltip = () => {
+      if (hideTooltipTimeout) clearTimeout(hideTooltipTimeout);
+      hideTooltipTimeout = setTimeout(() => {
+        // Clear any auto-scroll intervals
+        const scrollContainer = tooltip.node()?.querySelector('.country-list-container');
+        if (scrollContainer?._autoScrollInterval) {
+          clearInterval(scrollContainer._autoScrollInterval);
+        }
+        tooltip.style('display', 'none');
+      }, 300);
+    };
+    
+    const cancelHideTooltip = () => {
+      if (hideTooltipTimeout) {
+        clearTimeout(hideTooltipTimeout);
+        hideTooltipTimeout = null;
+      }
+    };
+    
+    // Add event handlers to tooltip to keep it visible when hovering
+    tooltip
+      .on('mouseenter', cancelHideTooltip)
+      .on('mouseleave', () => {
+        // Clear any auto-scroll intervals
+        const scrollContainer = tooltip.node()?.querySelector('.country-list-container');
+        if (scrollContainer?._autoScrollInterval) {
+          clearInterval(scrollContainer._autoScrollInterval);
+        }
+        tooltip.style('display', 'none');
+      });
+    
     plot.append('rect')
       .attr('class', 'bin-hover-layer')
       .attr('x', 0)
@@ -519,15 +742,14 @@
       .attr('fill', 'transparent')
       .style('pointer-events', 'all')
       .on('mousemove', (event) => {
+        cancelHideTooltip();
         const [mx] = d3.pointer(event, plot.node());
         const step = innerW / binCount;
         const idx = Math.max(0, Math.min(binCount - 1, Math.floor(mx / Math.max(step, 1e-6))));
         const bin = bins[idx];
         if (bin) showBinTooltip(event, bin);
       })
-      .on('mouseleave', () => {
-        tooltip.style('display', 'none');
-      });
+      .on('mouseleave', scheduleHideTooltip);
   }
 
   function drawChoroplethMap(state) {
@@ -545,6 +767,18 @@
 
     const cfg = state.config;
     const mapSelector = cfg.choroplethSelector;
+
+    const resolveFeatureCode = (feature) => {
+      const raw = feature?.id
+        || feature?.properties?.ISO_A3
+        || feature?.properties?.iso_a3
+        || feature?.properties?.ISO3
+        || feature?.properties?.iso3
+        || feature?.properties?.Code
+        || feature?.properties?.code
+        || '';
+      return String(raw).trim().toUpperCase();
+    };
 
     // Check if container exists
     const mapContainer = document.querySelector(mapSelector);
@@ -594,6 +828,8 @@
 
     // Create or update the choropleth map
     if (!state.choroplethMap) {
+      d3.select(mapSelector).selectAll('*').remove();
+
       state.choroplethMap = new MapClass({
         parentElement: mapSelector,
         valueProperty: 'data',
@@ -602,7 +838,7 @@
         entityColumn: cfg.entityColumn,
         codeColumn: cfg.codeColumn,
         containerWidth: 900,
-        containerHeight: 600,
+        containerHeight: 350,
         hideYearControls: true
       }, geoDataWithAll);
 
@@ -616,6 +852,16 @@
       state.choroplethMap.currentYearIndex = state.yearPos;
       state.choroplethMap.updateVis(); // Update colors and render with new data
     }
+
+    d3.select(mapSelector)
+      .selectAll('path.country')
+      .style('cursor', 'pointer')
+      .on('click.linkedToggle', (event, feature) => {
+        event.stopPropagation();
+        const code = resolveFeatureCode(feature);
+        if (!code) return;
+        toggleCountrySelection(state, code);
+      });
   }
 
   function render(state) {
@@ -787,8 +1033,8 @@
       projectedColumn: config.projectedColumn,
       defaultSelectedCodes: config.defaultSelectedCodes || ['USA', 'CHN', 'IND'],
       useExistingCountrySelector: !!config.useExistingCountrySelector,
-      scatterHeight: config.scatterHeight || 420,
-      barHeight: config.barHeight || 430
+      scatterHeight: config.scatterHeight || 300,
+      barHeight: config.barHeight || 300
     };
   }
 
@@ -828,6 +1074,8 @@
       destroy: () => {
         detachCountrySelector();
         detachResize();
+        d3.select(config.choroplethSelector).selectAll('*').remove();
+        state.choroplethMap = null;
       },
       setYearIndex: (yearIndex) => {
         const idx = Math.max(0, Math.min(state.years.length - 1, yearIndex));

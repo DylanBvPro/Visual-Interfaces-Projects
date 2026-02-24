@@ -17,6 +17,25 @@ const dataVisualizationOptions = [
 
 let hasShownVisualizationWarning = false;
 
+const controlHelpById = {
+    rSelect: "R controls circle size in the scatterplot. Choose which metric should drive the bubble radius.",
+    xSelect: "X sets the horizontal axis variable for the comparative chart.",
+    ySelect: "Y sets the vertical axis variable for the comparative chart.",
+    dataVisualizationSelect: "Choose chart style. Scatter Plot is the most stable option; other modes are experimental.",
+    yearFilter: "Enter a year to focus comparisons at a specific point in time."
+};
+
+function shouldShowPopupOnce(popupId) {
+    const key = `popupSeen:${window.location.pathname}:${popupId}`;
+    try {
+        if (localStorage.getItem(key) === '1') return false;
+        localStorage.setItem(key, '1');
+        return true;
+    } catch (error) {
+        return true;
+    }
+}
+
 function createDropdown(id, labelText, options, defaultValue) {
     const container = document.createElement("div");
     container.className = "variable-container";
@@ -29,6 +48,7 @@ function createDropdown(id, labelText, options, defaultValue) {
     const select = document.createElement("select");
     select.id = id;
     select.className = "variable-select";
+    select.title = controlHelpById[id] || "";
 
     options.forEach(optionValue => {
         const option = document.createElement("option");
@@ -51,7 +71,7 @@ function createDropdown(id, labelText, options, defaultValue) {
     });
 
     select.addEventListener("change", () => {
-        if (id === "dataVisualizationSelect" && !hasShownVisualizationWarning && typeof Swal !== 'undefined') {
+        if (id === "dataVisualizationSelect" && !hasShownVisualizationWarning && typeof Swal !== 'undefined' && shouldShowPopupOnce('compareVisualizationWarning')) {
             hasShownVisualizationWarning = true;
             Swal.fire({
                 title: 'Visualization Changed/A.I. ',
@@ -150,6 +170,7 @@ document.addEventListener("DOMContentLoaded", () => {
     yearInput.type = "number";
     yearInput.id = "yearFilter";
     yearInput.className = "variable-select";
+    yearInput.title = controlHelpById.yearFilter;
     yearInput.placeholder = "e.g. 2020";
     yearInput.min = "1900";
     yearInput.max = "2100";

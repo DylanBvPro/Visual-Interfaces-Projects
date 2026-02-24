@@ -322,6 +322,9 @@ class ChoroplethMap {
                 : 'No data available')
             : '<em>Not selected</em>';
 
+        const selectionLabel = isSelected ? 'Selected' : 'Not selected';
+        const typeLabel = isSelected ? (isProjected ? 'Projected' : 'Actual') : 'N/A';
+
         const entityLabel = d.properties.name || 'Unknown';
         const yearLabel = vis.years?.[vis.currentYearIndex] || '';
 
@@ -348,12 +351,26 @@ class ChoroplethMap {
         <div style="font-size: 14px; color: #555; margin-bottom: 6px;"><i>${yearLabel}</i></div>
         <ul style="list-style: none; padding: 0; margin: 0; font-size: 14px;">
           <li>${vis.config.legendTitle}: ${valueLabel}</li>
+                    <li>Selection: <strong>${selectionLabel}</strong></li>
+                    <li>Type: <strong>${typeLabel}</strong></li>
         </ul>
       `);
     }
 
     renderVis() {
         let vis = this;
+
+        const featureCode = (feature) => {
+            const raw = feature?.id
+                || feature?.properties?.ISO_A3
+                || feature?.properties?.iso_a3
+                || feature?.properties?.ISO3
+                || feature?.properties?.iso3
+                || feature?.properties?.Code
+                || feature?.properties?.code
+                || '';
+            return String(raw).trim().toUpperCase();
+        };
 
         const countries = vis.data; // GeoJSON already has .features
         // Fit the projection using fitExtent with a small inset to reduce outer whitespace
@@ -386,6 +403,19 @@ class ChoroplethMap {
                 vis.lastMouseEvent = null;
                 d3.select('#tooltip').style('display', 'none');
             });
+
+        if (vis.hoveredFeature && vis.lastMouseEvent) {
+            const hoveredCode = featureCode(vis.hoveredFeature);
+            const nextHovered = countries.features.find((f) => featureCode(f) === hoveredCode);
+            if (nextHovered) {
+                vis.hoveredFeature = nextHovered;
+                vis.updateTooltip(vis.lastMouseEvent, nextHovered);
+            } else {
+                vis.hoveredFeature = null;
+                vis.lastMouseEvent = null;
+                d3.select('#tooltip').style('display', 'none');
+            }
+        }
 
 
 
