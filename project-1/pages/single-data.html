@@ -105,6 +105,27 @@
                 max-width: 250px;
             }
         }
+
+        .help-tour-button {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: none;
+            font-size: 24px;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 2000;
+            background: linear-gradient(135deg, #4b4b4e, #848691);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .help-tour-button:hover {
+            background: linear-gradient(135deg, #5a5a60, #9597a3);
+        }
     </style>
 
     <header>
@@ -139,7 +160,8 @@
             <svg id="scatterplot" style="flex: 1; overflow: auto;"></svg>
             <div id="country-filters"></div>
         </div>
-        <hr class="modern-divider" style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+        <hr class="modern-divider"
+            style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
 
         <div id="chart-container"><svg id="barchart"></svg></div>
 
@@ -147,8 +169,22 @@
             style="position:absolute; display:none; background:#fff; border:1px solid #aaa; padding:10px; pointer-events:none;">
         </div>
 
-        <svg id="chart"></svg>
-<hr class="modern-divider" style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+        <hr class="modern-divider"
+            style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+        <section id="linked-highlight-charts" style="margin-top: 24px;">
+            <div id="linked-year-controls-host"></div>
+            <div style="display: flex; gap: 20px; width: 100%; align-items: stretch;">
+                <svg id="linked-scatterplot" style="flex: 1; min-height: 300px; min-width: 350px;"></svg>
+                <svg id="linked-barchart" style="flex: 1; min-height: 300px; min-width: 350px;"></svg>
+            </div>
+            <div style="margin-top: 20px;">
+                <div id="linked-choropleth-map" style="width: 100%; height: 350px;"></div>
+            </div>
+        </section>
+
+        <hr class="modern-divider"
+            style=" border:noon; height: 3px; background: linear-gradient(to right, #cfe2f2, #0d306b, #cfe2f2); margin: 40px 0; opacity: 0.9;">
+        <h2>Choropleth Timeline Map</h2>
         <div id="map"></div>
 
         <div class="source">
@@ -167,28 +203,145 @@
         <script src="../js/choroplethMap.js"></script>
         <script src="../js/topojson.v3.js"></script>
         <script src="../js/single-data-main.js"></script>
+        <script src="../js/linked-highlight-charts.js"></script>
     </div>
 
+    <button id="help-tour-button" class="help-tour-button" title="Open help tour" aria-label="Open help tour">i</button>
+
     <script>
-        function showPopup() {
-            Swal.fire({
-                title: 'Welcome!',
-                text: 'Feel free to explore the data visualizations. If you want to compare the world data against a single coutntry, select the country from the dropdown menu on the right and select world. Life expectancy data more limited then the rest and might not be available for all countries and doesn\'t have any predictive data.',
-                icon: 'info',
-                confirmButtonText: 'Cool',
-                customClass: {
-                    popup: 'custom-popup',         // Apply your CSS to the popup container
-                    title: 'custom-popup-title',   // Optional: style title
-                    content: 'custom-popup-text',  // Optional: style text
-                    confirmButton: 'custom-popup-button' // Style the button
+        async function showPopup() {
+            const steps = [
+                {
+                    title: 'Welcome to Single Statistic Charts',
+                    text: 'Use the data dropdown to switch between population, growth rate, median age, and life expectancy.'
                 },
-                buttonsStyling: false // Disable default SweetAlert2 button styles
-            });
+                {
+                    title: 'Select Countries',
+                    text: 'Use the country list and search to focus on specific countries. Selecting none is allowed, but charts will be empty.'
+                },
+                {
+                    title: 'Read the Charts Together',
+                    text: 'Scatterplot and bar chart update from the same selected data, so comparisons stay aligned.'
+                },
+                {
+                    title: 'Use Map and Timeline',
+                    text: 'The choropleth map and timeline controls let you inspect how values change across years.'
+                },
+                {
+                    title: 'Data Coverage Note',
+                    text: 'Life expectancy has fewer entries and may not include projected values for all countries.'
+                }
+            ];
+
+            for (let index = 0; index < steps.length; index += 1) {
+                const step = steps[index];
+                await Swal.fire({
+                    title: step.title,
+                    text: step.text,
+                    icon: 'info',
+                    confirmButtonText: index === steps.length - 1 ? 'Start Exploring' : 'Next',
+                    customClass: {
+                        popup: 'custom-popup',
+                        title: 'custom-popup-title',
+                        content: 'custom-popup-text',
+                        confirmButton: 'custom-popup-button'
+                    },
+                    buttonsStyling: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: true,
+                    footer: `Step ${index + 1} of ${steps.length}`
+                });
+            }
         }
 
+        window.addEventListener('DOMContentLoaded', () => {
+            const helpTourButton = document.getElementById('help-tour-button');
+            if (helpTourButton) {
+                helpTourButton.addEventListener('click', () => {
+                    showPopup();
+                });
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', () => {
-            showPopup();
+            const dataOptions = {
+                medianAge: {
+                    csvPath: '../data/median-age.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Median age, total',
+                    projectedColumn: 'Median age (Projected)'
+                },
+                populationGrowth: {
+                    csvPath: '../data/population-growth-rates.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Growth rate, total',
+                    projectedColumn: 'Population growth rate (%) (Projected)'
+                },
+                population: {
+                    csvPath: '../data/population-with-un-projections.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Population, total',
+                    projectedColumn: 'Population, medium projection (Projected)'
+                },
+                lifeExpectancy: {
+                    csvPath: '../data/life-expectancy.csv',
+                    entityColumn: 'Entity',
+                    codeColumn: 'Code',
+                    yearColumn: 'Year',
+                    actualColumn: 'Life expectancy',
+                    projectedColumn: ''
+                }
+            };
+
+            let linkedChartsController = null;
+
+            async function mountLinkedCharts(optionKey) {
+                const option = dataOptions[optionKey] || dataOptions.medianAge;
+                if (!window.HighlightedCountryCharts || !option) return;
+
+                if (linkedChartsController && typeof linkedChartsController.destroy === 'function') {
+                    linkedChartsController.destroy();
+                    linkedChartsController = null;
+                }
+
+                linkedChartsController = await window.HighlightedCountryCharts.init({
+                    csvPath: option.csvPath,
+                    scatterplotSelector: '#linked-scatterplot',
+                    barchartSelector: '#linked-barchart',
+                    choroplethSelector: '#linked-choropleth-map',
+                    geoDataPath: '../data/worldgeo.json',
+                    yearControlsHostSelector: '#linked-year-controls-host',
+                    yearInputSelector: '#linked-year-input-bottom',
+                    yearLabelSelector: '#linked-year-label-bottom',
+                    countryFilterSelector: '#country-filters',
+                    entityColumn: option.entityColumn,
+                    codeColumn: option.codeColumn,
+                    yearColumn: option.yearColumn,
+                    actualColumn: option.actualColumn,
+                    projectedColumn: option.projectedColumn,
+                    useExistingCountrySelector: true,
+                    defaultSelectedCodes: ['USA', 'CHN', 'IND']
+                });
+            }
+
+            const dropdown = document.getElementById('variable-dropdown');
+            const initialKey = dropdown ? dropdown.value : 'medianAge';
+
+            setTimeout(() => {
+                mountLinkedCharts(initialKey).catch(console.error);
+            }, 250);
+
+            if (dropdown) {
+                dropdown.addEventListener('change', (event) => {
+                    mountLinkedCharts(event.target.value).catch(console.error);
+                });
+            }
         });
     </script>
 

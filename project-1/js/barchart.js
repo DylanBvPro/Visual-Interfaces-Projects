@@ -412,7 +412,21 @@ class Barchart {
             .attr('font-weight', 'bold')  // Make the text bold
             .attr('stroke', 'black')  // Add a black stroke for contrast
             .attr('stroke-width', '2px')  // Define stroke width
-            .text(d => d.key);  // Display the label (d.key or another property if needed)
+            .each(function(d) {
+              // Clear existing tspans
+              d3.select(this).selectAll('tspan').remove();
+              
+              if (grouped.length > 8) return; // Hide if more than 8 bars
+              
+              // Split country name by spaces and add each word on a new line
+              const words = d.country.split(' ');
+              words.forEach((word, i) => {
+                d3.select(this).append('tspan')
+                  .attr('x', vis.xScale(d.key) + vis.xScale.bandwidth() / 2)
+                  .attr('dy', i === 0 ? '0' : '1.2em') // Line height for subsequent words
+                  .text(word);
+              });
+            });
 
         // Tooltip event listeners
         bars

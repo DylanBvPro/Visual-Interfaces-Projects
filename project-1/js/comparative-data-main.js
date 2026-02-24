@@ -213,6 +213,12 @@ function metricFromROption(rOption) {
   return map[rOption] || 'growthRate';
 }
 
+function setCompareStateMessage(message) {
+  const output = document.getElementById('compare-settings-output');
+  if (!output) return;
+  output.textContent = message || '';
+}
+
 function rebuildCharts() {
   if (!mergedData || mergedData.length === 0) return;
 
@@ -303,6 +309,7 @@ function rebuildCharts() {
 
 function filterData(selectedCodes) {
   if (!scatterplot || !barchart || !Array.isArray(mergedData) || mergedData.length === 0) {
+    setCompareStateMessage('Data is still loading. Please wait a moment.');
     return;
   }
 
@@ -310,12 +317,24 @@ function filterData(selectedCodes) {
     ? [] 
     : mergedData.filter(d => selectedCodes.includes(d.Code || d.code || ''));
 
+  if (!selectedCodes || selectedCodes.length === 0) {
+    setCompareStateMessage('No countries selected. Use the checklist or click Select All to display data.');
+  } else if (countryFiltered.length === 0) {
+    setCompareStateMessage('No rows found for the selected countries. Try different countries or reset your selection.');
+  }
+
   const metricFiltered = countryFiltered.filter(d => {
     const rMetric = metricFromROption(currentSettings.rOption);
     return hasMetricValue(d, currentSettings.xOption)
       && hasMetricValue(d, currentSettings.yOption)
       && hasMetricValue(d, rMetric);
   });
+
+  if (selectedCodes && selectedCodes.length > 0 && countryFiltered.length > 0 && metricFiltered.length === 0) {
+    setCompareStateMessage('No data matches the current X/Y/R metric combination. Try a different axis, radius metric, or year setting.');
+  } else if (metricFiltered.length > 0) {
+    setCompareStateMessage('');
+  }
 
   scatterplot.data = metricFiltered;
   barchart.data = metricFiltered;

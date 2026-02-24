@@ -111,7 +111,8 @@ class Scatterplot {
         // Filter data by year if in comparative mode with year filter
         let workingData = vis.data;
         const isXYearAxis = vis.config.xActualColumn === 'Year' || vis.config.xActualColumn === vis.config.yearColumn;
-        if (vis.config.isComparative && vis.config.yearFilter && !isXYearAxis) {
+        const isYYearAxis = vis.config.actualColumn === 'Year' || vis.config.actualColumn === vis.config.yearColumn;
+        if (vis.config.isComparative && vis.config.yearFilter && !isXYearAxis && !isYYearAxis) {
             const targetYear = Number(vis.config.yearFilter);
             if (Number.isFinite(targetYear)) {
                 workingData = vis.data.filter(d => d[vis.config.yearColumn] === targetYear);
