@@ -7,7 +7,7 @@ Each project includes a walkthrough, design notes, implementation details, and r
 
 ## Projects Overview
 
-### **[Project 1: Our World In Data]([https://github.com/DylanBvPro/Visual-Interfaces-Projects/wiki/Project-1:-Home](https://dylanbvpro.github.io/Visual-Interfaces-Projects/project-1/))**
+### **[Project 1: Our World In Data](https://dylanbvpro.github.io/Visual-Interfaces-Projects/project-1/)**
 An interactive D3-based visualization that explores global datasets sourced from Our World in Data.
 Includes data processing steps, UI design notes, and a full walkthrough.
 
